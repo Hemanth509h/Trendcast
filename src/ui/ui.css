@@ -1,0 +1,271 @@
+
+body {
+  padding: 0;
+  margin: 0;
+
+}
+.logo {
+  font-family: Outfit, sans-serif;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  font-size: 10px;
+  font-weight: bold;
+  padding-bottom: 15px;
+  color:black;
+
+}
+.linechart {
+  color: #1d4fd7;
+  background-color: #e3e9f7;
+  padding: 8px;
+  border-radius: 8px;
+  font-size: 15px;
+}
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  width: 230px;
+  padding: 1rem;
+  border: 0.5px solid #e6e8ec;
+  box-sizing: border-box;
+}
+hr {
+  border: 0.1sm solid #6a6b6d;
+  width: 100%;
+}
+.menu {
+  font-family: Inter, sans-serif;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding-top: 15px;
+}
+.menu-item {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  color:gray;
+  text-decoration: none;
+  animation: 15s forwards;
+  font-weight: 500;
+  
+}
+.menu-item:hover{
+  color: #1d4fd7;
+  background-color: #e3e9f7;
+}
+.menu-icon :hover {
+  color: #393d42;
+  font-size: 20px;
+}
+.menu-item-active {
+  background-color: #1d4fd7;
+  color: rgb(255, 255, 255);
+  border-radius: 12px;
+}
+
+.menu-icon-active {
+  color: var(--primary-foreground);
+}
+
+.menu-footer {
+  background-color: #ebe7f9;
+  padding: 1rem;
+  border-radius: 0.5rem;
+  margin-top: auto;
+  margin-bottom: 20px;
+  font-weight: normal;
+  font-size: small;
+}
+.menu-footer > .footer > .h5 {
+  font-size: 15px;
+  margin: 0px;
+  color: black;
+}
+
+.menu-footer > .footer > p {
+  font-size: 12px;
+  font-weight: 300;
+  color:gray;
+  line-height: 1.5;
+}
+
+
+
+/* button styles */
+
+
+.action-container {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+}
+
+/* Base button */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  background: white;
+  border: 1px solid transparent;
+  transition: all 0.2s ease;
+  
+}
+
+/* Clear Data (red outline) */
+.btn-clear {
+  color: #ef4444;
+  border: 1px solid #fecaca;
+  background-color: #fff;
+}
+
+.btn-clear:hover {
+  background-color: #fef2f2;
+}
+
+/* Import CSV (neutral outline) */
+.btn-import {
+  color: #111827;
+  border: 1px solid #e5e7eb;
+  background-color: #fff;
+}
+
+.btn-import:hover {
+  background-color: #f9fafb;
+}
+
+/* Add Record (blue filled) */
+.btn-add {
+  color: #ffffff;
+  background-color: #2563eb;
+  border: none;
+  box-shadow: 0 4px 10px rgba(37, 99, 235, 0.25);
+}
+
+.btn-add:hover {
+  background-color: #1d4ed8;
+}
+
+.btn-export {
+  border: 1px solid #3b82f6;
+  color: #3b82f6;
+}
+.btn-export:hover {
+  background-color: #eff6ff;
+}
+.btn-refrash{
+  border: 1px solid #3b82f6;
+  color: #3b82f6;
+}
+.btn-refrash:hover {
+  background-color: #eff6ff;
+} 
+
+.btn:hover {
+  transform: scale(1.05);
+}
+.btn:active {
+  transform: scale(0.95);
+}
+
+.btn-upload {
+  border: 1px solid #3b82f6;
+  color: #3b82f6;
+}
+
+.btn-cancel {
+  color: #ef4444;
+  border: 1px solid #fecaca;
+  background-color: #fff;
+}
+
+
+
+
+
+.spinner-sm {
+  animation: spin 0.8s linear infinite;
+}
+
+/* Rotation animation */
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+
+
+
+
+
+/* Toast Container */
+.toast-container {
+  position: fixed;
+  top: 5%;
+  right: 5%;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.toast {
+  min-width: 200px;
+  padding: 12px 18px;
+  border-radius: 8px;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 500;
+  box-shadow: 0 6px 15px rgba(0, 0, 0, 0.2);
+  animation: slideIn 0.3s ease,
+             fadeOut 0.3s ease 2.7s forwards;
+}
+
+/* Toast Types */
+
+.toast-info {
+  background: #3b82f6;
+}
+.toast-success {
+  background: #22c55e;
+}
+.toast-error {
+  background: #ef4444;
+}
+.toast-warning {
+  background: #f59e0b;
+}
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(40px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+@keyframes fadeOut {
+  to {
+    opacity: 0;
+    transform: translateX(40px);
+  }
+}
+
+
+
+
