@@ -37,8 +37,8 @@ export default function Forecasts() {
     const stored = sessionStorage.getItem("salesdata");
     return stored ? JSON.parse(stored) : [];
   });
-  const [filename] = React.useState(() => sessionStorage.getItem("sales_filename") || null);
-  const [recordCount] = React.useState(() => sessionStorage.getItem("sales_recordcount") || 0);
+  const [importedfilename, setimportedfilename] = React.useState(() => sessionStorage.getItem("sales_filename") || null);
+  const [importedfilerecord, setimportedfilerecord] = React.useState(() => Number(sessionStorage.getItem("sales_recordcount")) || 0);
   const [selectedColumn, setSelectedColumn] = React.useState("");
   const [selectedHorizon, setSelectedHorizon] = React.useState("12");
   const [selectmodel, setselectmodel] = React.useState("timeseries");
@@ -47,6 +47,7 @@ export default function Forecasts() {
   const [isLoading, setIsLoading] = React.useState(false);
   const [hoveredMetric, setHoveredMetric] = React.useState(null);
   const [zoomRange, setZoomRange] = React.useState({ min: null, max: null });
+  const [isAllColumnsMode, setIsAllColumnsMode] = React.useState(false);
 
   // ========== ALL REF HOOKS ==========
   const chartRef = React.useRef(null);
@@ -137,6 +138,7 @@ export default function Forecasts() {
     }
 
     setIsLoading(true);
+    setIsAllColumnsMode(false);
     try {
       const response = await fetch(getApiUrl("/api/generateforecast"), {
         method: "POST",
@@ -159,6 +161,59 @@ export default function Forecasts() {
       setForecastData(result);
       setMetrics(result.metrics);
       toast("Forecast generated successfully!", "success");
+    } catch (error) {
+      toast(error.message, "error");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleAllColumnsForecast = async () => {
+    if (!salesdata || salesdata.length === 0) {
+      toast("No data available to forecast.", "warning");
+      return;
+    }
+
+    const numericColumns = Object.keys(salesdata[0]).filter(key => {
+      const val = salesdata[0][key];
+      return typeof val === 'number' || (!isNaN(parseFloat(val)) && isFinite(val));
+    });
+
+    if (numericColumns.length === 0) {
+      toast("No numeric columns found for forecasting.", "error");
+      return;
+    }
+
+    setIsLoading(true);
+    setIsAllColumnsMode(true);
+    try {
+      const allResults = await Promise.all(numericColumns.map(async (col) => {
+        const response = await fetch(getApiUrl("/api/generateforecast"), {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            column: col,
+            horizon: parseInt(selectedHorizon),
+            model: selectmodel,
+          }),
+        });
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.error || `Failed for ${col}`);
+        return { column: col, ...result };
+      }));
+
+      // Merge results for "All Columns" view
+      const mergedDates = allResults[0].dates;
+      const mergedHistoricalDates = allResults[0].historical.dates;
+      
+      setForecastData({
+        isAll: true,
+        dates: mergedDates,
+        historical: { dates: mergedHistoricalDates },
+        results: allResults
+      });
+      setMetrics(null); // Metrics don't make sense for combined view
+      toast("Multi-column forecast generated!", "success");
     } catch (error) {
       toast(error.message, "error");
     } finally {
@@ -242,6 +297,86 @@ export default function Forecasts() {
     32, 34, 36, 38, 40, 42, 44, 46, 48, 50,
   ];
 
+  const getDatasets = () => {
+    if (!forecastData) return [];
+    
+    if (!forecastData.isAll) {
+      return [
+        {
+          label: "Historical Data",
+          data: forecastData.historical?.values || [],
+          borderColor: "#3b82f6",
+          backgroundColor: "rgba(59, 130, 246, 0.1)",
+          fill: true,
+          tension: 0.4,
+          borderWidth: 2,
+        },
+        {
+          label: "Trend",
+          data: [
+            ...(forecastData.historical?.trend || []),
+            ...Array((forecastData.dates || []).length).fill(null),
+          ],
+          borderColor: "#f59e0b",
+          backgroundColor: "transparent",
+          borderDash: [2, 2],
+          fill: false,
+          tension: 0.4,
+          borderWidth: 2,
+        },
+        {
+          label: "Forecast",
+          data: [
+            ...Array(
+              (forecastData.historical?.values?.length || 1) - 1,
+            ).fill(null),
+            forecastData.historical?.values?.[
+              forecastData.historical.values.length - 1
+            ],
+            ...(forecastData.forecast || []),
+          ],
+          borderColor: "#10b981",
+          backgroundColor: "rgba(16, 185, 129, 0.1)",
+          borderDash: [5, 5],
+          fill: true,
+          tension: 0.4,
+          borderWidth: 2,
+        },
+      ];
+    }
+
+    const colors = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
+    return forecastData.results.flatMap((res, idx) => {
+      const color = colors[idx % colors.length];
+      return [
+        {
+          label: `${res.column} (Hist)`,
+          data: res.historical.values,
+          borderColor: color,
+          backgroundColor: 'transparent',
+          fill: false,
+          tension: 0.4,
+          borderWidth: 1,
+          pointRadius: 0,
+        },
+        {
+          label: `${res.column} (Fcst)`,
+          data: [
+            ...Array(res.historical.values.length - 1).fill(null),
+            res.historical.values[res.historical.values.length - 1],
+            ...res.forecast
+          ],
+          borderColor: color,
+          borderDash: [5, 5],
+          backgroundColor: 'transparent',
+          fill: false,
+          tension: 0.4,
+          borderWidth: 2,
+        }
+      ];
+    });
+  };
+
   // ========== RENDER ==========
 
   return (
@@ -249,9 +384,9 @@ export default function Forecasts() {
       <div className="forecast-header">
         <h1>Sales Revenue Forecast</h1>
         <p>Advanced machine learning predictions for your sales pipeline</p>
-        {filename && (
+        {importedfilename && (
           <p className="imported-info" style={{ fontSize: '0.9rem', color: '#666', marginTop: '5px' }}>
-            Data source: {filename} ({recordCount} records)
+            Data source: {importedfilename} ({importedfilerecord} records)
           </p>
         )}
       </div>
@@ -312,7 +447,26 @@ export default function Forecasts() {
           onClick={handleGenerateForecast}
           disabled={isLoading}
         >
-          {isLoading ? "Generating..." : "Generate Forecast"}
+          {isLoading && !isAllColumnsMode ? "Generating..." : "Generate Forecast"}
+        </button>
+
+        <button
+          className="btn btn-all-columns"
+          onClick={handleAllColumnsForecast}
+          disabled={isLoading}
+          style={{
+            padding: "10px 20px",
+            backgroundColor: "#8b5cf6",
+            color: "white",
+            border: "none",
+            borderRadius: "6px",
+            cursor: "pointer",
+            fontWeight: "600",
+            transition: "all 0.3s ease",
+            boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+          }}
+        >
+          {isLoading && isAllColumnsMode ? "Generating All..." : "Forecast All Columns"}
         </button>
       </div>
 
@@ -465,86 +619,7 @@ export default function Forecasts() {
                     ...(forecastData.historical?.dates || []),
                     ...(forecastData.dates || []),
                   ],
-                  datasets: [
-                    {
-                      label: "Historical Data",
-                      data: forecastData.historical?.values || [],
-                      borderColor: "#3b82f6",
-                      backgroundColor: "rgba(59, 130, 246, 0.1)",
-                      fill: true,
-                      tension: 0.4,
-                      borderWidth: 2,
-                    },
-                    {
-                      label: "Trend",
-                      data: [
-                        ...(forecastData.historical?.trend || []),
-                        ...Array((forecastData.dates || []).length).fill(null),
-                      ],
-                      borderColor: "#f59e0b",
-                      backgroundColor: "transparent",
-                      borderDash: [2, 2],
-                      fill: false,
-                      tension: 0.4,
-                      borderWidth: 2,
-                    },
-                    {
-                      label: "Forecast",
-                      data: [
-                        ...Array(
-                          (forecastData.historical?.values?.length || 1) - 1,
-                        ).fill(null),
-                        forecastData.historical?.values?.[
-                          forecastData.historical.values.length - 1
-                        ],
-                        ...(forecastData.forecast || []),
-                      ],
-                      borderColor: "#10b981",
-                      backgroundColor: "rgba(16, 185, 129, 0.1)",
-                      borderDash: [5, 5],
-                      fill: true,
-                      tension: 0.4,
-                      borderWidth: 2,
-                    },
-                    {
-                      label: "Confidence Upper",
-                      data: [
-                        ...Array(
-                          (forecastData.historical?.values?.length || 1) - 1,
-                        ).fill(null),
-                        forecastData.historical?.values?.[
-                          forecastData.historical.values.length - 1
-                        ],
-                        ...(forecastData.confidence_bounds?.upper || []),
-                      ],
-                      borderColor: "#10b981",
-                      backgroundColor: "transparent",
-                      borderDash: [2, 2],
-                      fill: false,
-                      tension: 0.4,
-                      borderWidth: 1,
-                      pointRadius: 0,
-                    },
-                    {
-                      label: "Confidence Lower",
-                      data: [
-                        ...Array(
-                          (forecastData.historical?.values?.length || 1) - 1,
-                        ).fill(null),
-                        forecastData.historical?.values?.[
-                          forecastData.historical.values.length - 1
-                        ],
-                        ...(forecastData.confidence_bounds?.lower || []),
-                      ],
-                      borderColor: "#10b981",
-                      backgroundColor: "transparent",
-                      borderDash: [2, 2],
-                      fill: false,
-                      tension: 0.4,
-                      borderWidth: 1,
-                      pointRadius: 0,
-                    },
-                  ],
+                  datasets: getDatasets(),
                 }}
                 options={{
                   responsive: true,
