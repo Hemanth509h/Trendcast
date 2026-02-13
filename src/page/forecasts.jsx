@@ -706,7 +706,7 @@ export default function Forecasts() {
                       },
                       ticks: {
                         callback: function (value) {
-                          return "$" + value.toLocaleString();
+                          return value.toLocaleString();
                         },
                         font: {
                           size: 12,
@@ -795,38 +795,7 @@ export default function Forecasts() {
         </div>
       )}
 
-      {!metrics && (
-        <div className="metrics-grid">
-          <div className="metric-card primary">
-            <div className="metric-icon">📊</div>
-            <div className="metric-content">
-              <span className="metric-label">Target Column</span>
-              <span className="metric-value">{selectedColumn || "—"}</span>
-            </div>
-          </div>
-          <div className="metric-card success">
-            <div className="metric-icon">🎯</div>
-            <div className="metric-content">
-              <span className="metric-label">Model Accuracy</span>
-              <span className="metric-value">—%</span>
-            </div>
-          </div>
-          <div className="metric-card warning">
-            <div className="metric-icon">📈</div>
-            <div className="metric-content">
-              <span className="metric-label">Forecast Average</span>
-              <span className="metric-value">—</span>
-            </div>
-          </div>
-          <div className="metric-card info">
-            <div className="metric-icon">📉</div>
-            <div className="metric-content">
-              <span className="metric-label">Historical Average</span>
-              <span className="metric-value">—</span>
-            </div>
-          </div>
-        </div>
-      )}
+     
     </div>
   );
 }
