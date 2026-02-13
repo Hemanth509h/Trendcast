@@ -37,6 +37,8 @@ export default function Forecasts() {
     const stored = sessionStorage.getItem("salesdata");
     return stored ? JSON.parse(stored) : [];
   });
+  const [filename] = React.useState(() => sessionStorage.getItem("sales_filename") || null);
+  const [recordCount] = React.useState(() => sessionStorage.getItem("sales_recordcount") || 0);
   const [selectedColumn, setSelectedColumn] = React.useState("");
   const [selectedHorizon, setSelectedHorizon] = React.useState("12");
   const [selectmodel, setselectmodel] = React.useState("timeseries");
@@ -247,6 +249,11 @@ export default function Forecasts() {
       <div className="forecast-header">
         <h1>Sales Revenue Forecast</h1>
         <p>Advanced machine learning predictions for your sales pipeline</p>
+        {filename && (
+          <p className="imported-info" style={{ fontSize: '0.9rem', color: '#666', marginTop: '5px' }}>
+            Data source: {filename} ({recordCount} records)
+          </p>
+        )}
       </div>
       <div className="forecasts-buttons">
         <label>

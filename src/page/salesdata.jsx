@@ -25,8 +25,8 @@ export default function Salesdata() {
   const [dataloading, setDataloading] = useState(false);
 
   const [importedfile, setimportedfile] = useState(null);
-  const [importedfilename, setimportedfilename] = useState(null);
-  const [importedfilerecord, setimportedfilerecord] = useState(0);
+  const [importedfilename, setimportedfilename] = useState(() => sessionStorage.getItem("sales_filename") || null);
+  const [importedfilerecord, setimportedfilerecord] = useState(() => Number(sessionStorage.getItem("sales_recordcount")) || 0);
   
   // Initialize from sessionStorage or empty array
   const [salesdata, setsalesdata] = useState(() => {
@@ -59,6 +59,8 @@ export default function Salesdata() {
       }
       setimportedfilename(result.filename);
       setimportedfilerecord(result.records);
+      sessionStorage.setItem("sales_filename", result.filename);
+      sessionStorage.setItem("sales_recordcount", result.records);
       toast("File uploaded successfully!", "success");
 
       setisopenimportdialog(false);
@@ -87,6 +89,10 @@ export default function Salesdata() {
         setsalesdata([]);
         // Clear sessionStorage
         sessionStorage.removeItem("salesdata");
+        sessionStorage.removeItem("sales_filename");
+        sessionStorage.removeItem("sales_recordcount");
+        setimportedfilename(null);
+        setimportedfilerecord(0);
       }
     } catch (error) {
       toast(error.message, "error");
