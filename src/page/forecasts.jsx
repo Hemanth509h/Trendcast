@@ -470,76 +470,78 @@ export default function Forecasts() {
         </button>
       </div>
 
-      {metrics && forecastData && (
+      {((metrics && forecastData) || (forecastData && forecastData.isAll)) && (
         <div>
-          <div className="metrics-grid">
-            <div className="metric-card primary">
-              <div className="metric-icon">📊</div>
-              <div className="metric-content">
-                <div
-                  style={{ display: "flex", alignItems: "center", gap: "6px" }}
-                >
-                  <span className="metric-label">Target Column</span>
-                  <TooltipIcon
-                    metric="column"
-                    explanation="The data column selected for forecasting"
-                  />
+          {!forecastData.isAll && metrics && (
+            <div className="metrics-grid">
+              <div className="metric-card primary">
+                <div className="metric-icon">📊</div>
+                <div className="metric-content">
+                  <div
+                    style={{ display: "flex", alignItems: "center", gap: "6px" }}
+                  >
+                    <span className="metric-label">Target Column</span>
+                    <TooltipIcon
+                      metric="column"
+                      explanation="The data column selected for forecasting"
+                    />
+                  </div>
+                  <span className="metric-value">{selectedColumn}</span>
                 </div>
-                <span className="metric-value">{selectedColumn}</span>
+              </div>
+              <div className="metric-card success">
+                <div className="metric-icon">📈</div>
+                <div className="metric-content">
+                  <div
+                    style={{ display: "flex", alignItems: "center", gap: "6px" }}
+                  >
+                    <span className="metric-label">R² Score</span>
+                    <TooltipIcon
+                      metric="r2"
+                      explanation="Coefficient of determination (0-100%). Higher is better."
+                    />
+                  </div>
+                  <span className="metric-value">
+                    {(metrics.r2 * 100).toFixed(2)}%
+                  </span>
+                </div>
+              </div>
+              <div className="metric-card warning">
+                <div className="metric-icon">📉</div>
+                <div className="metric-content">
+                  <div
+                    style={{ display: "flex", alignItems: "center", gap: "6px" }}
+                  >
+                    <span className="metric-label">MAE</span>
+                    <TooltipIcon
+                      metric="mae"
+                      explanation="Mean Absolute Error. Lower is better."
+                    />
+                  </div>
+                  <span className="metric-value">
+                    ${metrics.mae?.toFixed(2) || "N/A"}
+                  </span>
+                </div>
+              </div>
+              <div className="metric-card info">
+                <div className="metric-icon">📊</div>
+                <div className="metric-content">
+                  <div
+                    style={{ display: "flex", alignItems: "center", gap: "6px" }}
+                  >
+                    <span className="metric-label">RMSE</span>
+                    <TooltipIcon
+                      metric="rmse"
+                      explanation="Root Mean Square Error. Lower is better."
+                    />
+                  </div>
+                  <span className="metric-value">
+                    ${metrics.rmse?.toFixed(2) || "N/A"}
+                  </span>
+                </div>
               </div>
             </div>
-            <div className="metric-card success">
-              <div className="metric-icon">📈</div>
-              <div className="metric-content">
-                <div
-                  style={{ display: "flex", alignItems: "center", gap: "6px" }}
-                >
-                  <span className="metric-label">R² Score</span>
-                  <TooltipIcon
-                    metric="r2"
-                    explanation="Coefficient of determination (0-100%). Higher is better."
-                  />
-                </div>
-                <span className="metric-value">
-                  {(metrics.r2 * 100).toFixed(2)}%
-                </span>
-              </div>
-            </div>
-            <div className="metric-card warning">
-              <div className="metric-icon">📉</div>
-              <div className="metric-content">
-                <div
-                  style={{ display: "flex", alignItems: "center", gap: "6px" }}
-                >
-                  <span className="metric-label">MAE</span>
-                  <TooltipIcon
-                    metric="mae"
-                    explanation="Mean Absolute Error. Lower is better."
-                  />
-                </div>
-                <span className="metric-value">
-                  ${metrics.mae?.toFixed(2) || "N/A"}
-                </span>
-              </div>
-            </div>
-            <div className="metric-card info">
-              <div className="metric-icon">📊</div>
-              <div className="metric-content">
-                <div
-                  style={{ display: "flex", alignItems: "center", gap: "6px" }}
-                >
-                  <span className="metric-label">RMSE</span>
-                  <TooltipIcon
-                    metric="rmse"
-                    explanation="Root Mean Square Error. Lower is better."
-                  />
-                </div>
-                <span className="metric-value">
-                  ${metrics.rmse?.toFixed(2) || "N/A"}
-                </span>
-              </div>
-            </div>
-          </div>
+          )}
 
           <div className="forecast-results">
             <h2>Forecast Chart</h2>

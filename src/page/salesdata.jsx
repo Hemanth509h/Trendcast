@@ -113,7 +113,7 @@ export default function Salesdata() {
       // Store in sessionStorage
       sessionStorage.setItem("salesdata", JSON.stringify(result.data));
       setDataloading(false);
-      toast(result.message, "success");
+      toast("Imported", "success");
     } catch (error) {
       toast(error.message, "error");
     }
