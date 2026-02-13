@@ -23,11 +23,16 @@ async def upload_file(file: UploadFile = File(...)):
         raise HTTPException(status_code=400, detail="Invalid file type. Use CSV or Excel.")
     
     data = df.to_dict(orient='records')
-    with open(DATA_FILE, 'w') as f:
-        json.dump({"data": data,
-                   "filename": file.filename,
-                    "record_count": len(data)}, f)
-    return {"message": "File uploaded and data stored successfully" }
+    try:
+        with open(DATA_FILE, 'w') as f:
+            json.dump({"data": data,
+                       "filename": file.filename,
+                        "record_count": len(data)}, f)
+            f.flush()
+            os.fsync(f.fileno())
+        return {"message": "File uploaded and data stored successfully" }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to store data: {str(e)}")
 
 @router.get("/salesdata")
 async def get_sales_data():
