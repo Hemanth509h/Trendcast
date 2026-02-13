@@ -5,23 +5,16 @@ export default defineConfig({
   plugins: [react()],
 
   server: {
-    host: "0.0.0.0",
+    host: true,
     port: 5000,
-    strictPort: true,
     allowedHosts: true,
 
     // 🔥 Force file watching
     watch: {
       usePolling: true,
-      interval: 100,
+      interval: 300,
     },
 
-    hmr: {
-      protocol: "wss",
-      clientPort: 443,
-    },
-
-    // Proxy stays
     proxy: {
       "/api": {
         target: "http://127.0.0.1:8000",
