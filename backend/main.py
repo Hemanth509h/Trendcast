@@ -1,6 +1,6 @@
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from backend.api.routes import sales, forecasts
+from api.routes import sales, forecasts
 
 app = FastAPI()
 
