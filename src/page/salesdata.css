@@ -71,7 +71,7 @@
 
 /* Header */
 .sales-table thead {
-  background: #f8fafc;
+  background: #2563eb;
   position: sticky;
   top: 0;
   z-index: 10;
@@ -81,13 +81,13 @@
 .sales-table th {
   padding: 16px 20px;
   text-align: left;
-  letter-spacing: 0.025em;
-  color: #64748b;
+  letter-spacing: 0.05em;
+  color: #ffffff;
   font-weight: 600;
   white-space: nowrap;
   font-size: 12px;
   text-transform: uppercase;
-  border-bottom: 2px solid #eef2f6;
+  border-bottom: none;
 }
 
 /* Body Cells */
