@@ -4,6 +4,7 @@ import "./forecasts.css";
 import "../ui/ui.css";
 import { getApiUrl } from "../utils/api";
 import { Info } from "lucide-react";
+import Dialog from "../ui/Dialog";
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -48,6 +49,8 @@ export default function Forecasts() {
   const [hoveredMetric, setHoveredMetric] = React.useState(null);
   const [zoomRange, setZoomRange] = React.useState({ min: null, max: null });
   const [isAllColumnsMode, setIsAllColumnsMode] = React.useState(false);
+  const [isSelectionModalOpen, setIsSelectionModalOpen] = React.useState(false);
+  const [selectedColumnsToForecast, setSelectedColumnsToForecast] = React.useState([]);
 
   // ========== ALL REF HOOKS ==========
   const chartRef = React.useRef(null);
@@ -184,10 +187,22 @@ export default function Forecasts() {
       return;
     }
 
+    setSelectedColumnsToForecast(numericColumns);
+    setIsSelectionModalOpen(true);
+  };
+
+  const executeMultiColumnForecast = async (columnsToProcess) => {
+    if (columnsToProcess.length === 0) {
+      toast("Please select at least one column.", "warning");
+      return;
+    }
+
     setIsLoading(true);
     setIsAllColumnsMode(true);
+    setIsSelectionModalOpen(false);
+    
     try {
-      const allResults = await Promise.all(numericColumns.map(async (col) => {
+      const allResults = await Promise.all(columnsToProcess.map(async (col) => {
         const response = await fetch(getApiUrl("/api/generateforecast"), {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -466,9 +481,55 @@ export default function Forecasts() {
             boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
           }}
         >
-          {isLoading && isAllColumnsMode ? "Generating All..." : "Forecast All Columns"}
+          {isLoading && isAllColumnsMode ? "Generating..." : "Forecast Selection"}
         </button>
       </div>
+
+      <Dialog
+        isopen={isSelectionModalOpen}
+        isclose={() => setIsSelectionModalOpen(false)}
+        title="Select Columns to Forecast"
+      >
+        <div style={{ padding: "10px" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", marginBottom: "20px" }}>
+            {salesdata && salesdata.length > 0 && Object.keys(salesdata[0]).filter(key => {
+              const val = salesdata[0][key];
+              return typeof val === 'number' || (!isNaN(parseFloat(val)) && isFinite(val));
+            }).map(col => (
+              <label key={col} style={{ display: "flex", alignItems: "center", gap: "8px", cursor: "pointer" }}>
+                <input
+                  type="checkbox"
+                  checked={selectedColumnsToForecast.includes(col)}
+                  onChange={(e) => {
+                    if (e.target.checked) {
+                      setSelectedColumnsToForecast([...selectedColumnsToForecast, col]);
+                    } else {
+                      setSelectedColumnsToForecast(selectedColumnsToForecast.filter(c => c !== col));
+                    }
+                  }}
+                />
+                {col}
+              </label>
+            ))}
+          </div>
+          <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px" }}>
+            <button
+              className="btn btn-cancel"
+              onClick={() => setIsSelectionModalOpen(false)}
+              style={{ backgroundColor: "#ef4444", color: "white", padding: "8px 16px", borderRadius: "4px", border: "none", cursor: "pointer" }}
+            >
+              Cancel
+            </button>
+            <button
+              className="btn btn-generate"
+              onClick={() => executeMultiColumnForecast(selectedColumnsToForecast)}
+              style={{ backgroundColor: "#8b5cf6", color: "white", padding: "8px 16px", borderRadius: "4px", border: "none", cursor: "pointer" }}
+            >
+              Start Forecast
+            </button>
+          </div>
+        </div>
+      </Dialog>
 
       {((metrics && forecastData) || (forecastData && forecastData.isAll)) && (
         <div>
