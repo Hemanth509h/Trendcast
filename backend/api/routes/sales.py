@@ -7,7 +7,7 @@ from fastapi import APIRouter, UploadFile, File, HTTPException, Response
 
 router = APIRouter()
 
-DATA_FILE = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data.json")
+DATA_FILE = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "data.json")
 
 @router.post("/upload")
 async def upload_file(file: UploadFile = File(...)):
