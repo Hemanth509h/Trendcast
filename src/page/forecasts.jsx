@@ -26,7 +26,7 @@ ChartJS.register(
   Title,
   Tooltip,
   Legend,
-  Filler
+  Filler,
 );
 ChartJS.register(zoomPlugin);
 
@@ -71,29 +71,29 @@ export default function Forecasts() {
     const config = {
       title: {
         display: true,
-        text: 'Date',
+        text: "Date",
         font: {
           size: 14,
-          weight: 'bold'
-        }
+          weight: "bold",
+        },
       },
       ticks: {
         font: {
-          size: 11
+          size: 11,
         },
         maxRotation: 45,
-        minRotation: 0
+        minRotation: 0,
       },
       grid: {
-        color: 'rgba(200, 200, 200, 0.1)',
-      }
+        color: "rgba(200, 200, 200, 0.1)",
+      },
     };
 
     // Only add min/max if they have actual numeric values (not null)
-    if (zoomRange.min !== null && typeof zoomRange.min === 'number') {
+    if (zoomRange.min !== null && typeof zoomRange.min === "number") {
       config.min = zoomRange.min;
     }
-    if (zoomRange.max !== null && typeof zoomRange.max === 'number') {
+    if (zoomRange.max !== null && typeof zoomRange.max === "number") {
       config.max = zoomRange.max;
     }
 
@@ -165,17 +165,21 @@ export default function Forecasts() {
   };
 
   const zoomToForecast = () => {
-    if (forecastData) {
-      const historicalLength = forecastData.historical?.dates?.length || 0;
-      const forecastLength = forecastData.dates?.length || 0;
-      const totalLength = historicalLength + forecastLength;
-      
-      // Set zoom to show forecast period (with 2 historical data points for context)
-      const minIndex = Math.max(0, historicalLength - 2);
-      const maxIndex = totalLength - 1;
-      
-      setZoomRange({ min: minIndex, max: maxIndex });
-    }
+    if (!chartRef.current || !forecastData) return;
+
+    const chart = chartRef.current;
+
+    const historicalLength = forecastData.historical?.dates?.length || 0;
+    const forecastLength = forecastData.dates?.length || 0;
+    const totalLength = historicalLength + forecastLength;
+
+    const minIndex = Math.max(0, historicalLength - 2);
+    const maxIndex = totalLength - 1;
+
+    chart.zoomScale("x", {
+      min: minIndex,
+      max: maxIndex,
+    });
   };
 
   const resetZoom = () => {
@@ -290,11 +294,17 @@ export default function Forecasts() {
             onChange={(e) => setselectmodel(e.target.value)}
           >
             <option value="">Select model</option>
-            <option value="timeseries">Time Series Model (Historical Analysis)</option>
+            <option value="timeseries">
+              Time Series Model (Historical Analysis)
+            </option>
           </select>
         </label>
 
-        <button className="btn btn-generate" onClick={handleGenerateForecast} disabled={isLoading}>
+        <button
+          className="btn btn-generate"
+          onClick={handleGenerateForecast}
+          disabled={isLoading}
+        >
           {isLoading ? "Generating..." : "Generate Forecast"}
         </button>
       </div>
@@ -305,9 +315,14 @@ export default function Forecasts() {
             <div className="metric-card primary">
               <div className="metric-icon">📊</div>
               <div className="metric-content">
-                <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                <div
+                  style={{ display: "flex", alignItems: "center", gap: "6px" }}
+                >
                   <span className="metric-label">Target Column</span>
-                  <TooltipIcon metric="column" explanation="The data column selected for forecasting" />
+                  <TooltipIcon
+                    metric="column"
+                    explanation="The data column selected for forecasting"
+                  />
                 </div>
                 <span className="metric-value">{selectedColumn}</span>
               </div>
@@ -315,38 +330,59 @@ export default function Forecasts() {
             <div className="metric-card success">
               <div className="metric-icon">📈</div>
               <div className="metric-content">
-                <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                <div
+                  style={{ display: "flex", alignItems: "center", gap: "6px" }}
+                >
                   <span className="metric-label">R² Score</span>
-                  <TooltipIcon metric="r2" explanation="Coefficient of determination (0-100%). Higher is better." />
+                  <TooltipIcon
+                    metric="r2"
+                    explanation="Coefficient of determination (0-100%). Higher is better."
+                  />
                 </div>
-                <span className="metric-value">{(metrics.r2 * 100).toFixed(2)}%</span>
+                <span className="metric-value">
+                  {(metrics.r2 * 100).toFixed(2)}%
+                </span>
               </div>
             </div>
             <div className="metric-card warning">
               <div className="metric-icon">📉</div>
               <div className="metric-content">
-                <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                <div
+                  style={{ display: "flex", alignItems: "center", gap: "6px" }}
+                >
                   <span className="metric-label">MAE</span>
-                  <TooltipIcon metric="mae" explanation="Mean Absolute Error. Lower is better." />
+                  <TooltipIcon
+                    metric="mae"
+                    explanation="Mean Absolute Error. Lower is better."
+                  />
                 </div>
-                <span className="metric-value">${metrics.mae?.toFixed(2) || "N/A"}</span>
+                <span className="metric-value">
+                  ${metrics.mae?.toFixed(2) || "N/A"}
+                </span>
               </div>
             </div>
             <div className="metric-card info">
               <div className="metric-icon">📊</div>
               <div className="metric-content">
-                <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                <div
+                  style={{ display: "flex", alignItems: "center", gap: "6px" }}
+                >
                   <span className="metric-label">RMSE</span>
-                  <TooltipIcon metric="rmse" explanation="Root Mean Square Error. Lower is better." />
+                  <TooltipIcon
+                    metric="rmse"
+                    explanation="Root Mean Square Error. Lower is better."
+                  />
                 </div>
-                <span className="metric-value">${metrics.rmse?.toFixed(2) || "N/A"}</span>
+                <span className="metric-value">
+                  ${metrics.rmse?.toFixed(2) || "N/A"}
+                </span>
               </div>
             </div>
           </div>
 
           <div className="forecast-results">
             <h2>Forecast Chart</h2>
-            
+
             <div style={{ marginBottom: "15px", display: "flex", gap: "10px" }}>
               <button
                 onClick={zoomToForecast}
@@ -360,7 +396,7 @@ export default function Forecasts() {
                   fontWeight: "600",
                   fontSize: "14px",
                   transition: "all 0.3s ease",
-                  boxShadow: "0 2px 4px rgba(0,0,0,0.1)"
+                  boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
                 }}
                 onMouseEnter={(e) => {
                   e.target.style.backgroundColor = "#059669";
@@ -387,7 +423,7 @@ export default function Forecasts() {
                   fontWeight: "600",
                   fontSize: "14px",
                   transition: "all 0.3s ease",
-                  boxShadow: "0 2px 4px rgba(0,0,0,0.1)"
+                  boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
                 }}
                 onMouseEnter={(e) => {
                   e.target.style.backgroundColor = "#4f46e5";
@@ -403,12 +439,25 @@ export default function Forecasts() {
                 ↺ Reset Zoom
               </button>
             </div>
-            
-            <div className="chart-container" style={{ height: "600px", marginBottom: "40px", background: "white", padding: "20px", borderRadius: "10px", boxShadow: "0 4px 6px rgba(0,0,0,0.05)" }}>
+
+            <div
+              className="chart-container"
+              style={{
+                height: "600px",
+                marginBottom: "40px",
+                background: "white",
+                padding: "20px",
+                borderRadius: "10px",
+                boxShadow: "0 4px 6px rgba(0,0,0,0.05)",
+              }}
+            >
               <Line
                 ref={chartRef}
                 data={{
-                  labels: [...(forecastData.historical?.dates || []), ...(forecastData.dates || [])],
+                  labels: [
+                    ...(forecastData.historical?.dates || []),
+                    ...(forecastData.dates || []),
+                  ],
                   datasets: [
                     {
                       label: "Historical Data",
@@ -435,8 +484,12 @@ export default function Forecasts() {
                     {
                       label: "Forecast",
                       data: [
-                        ...Array((forecastData.historical?.values?.length || 1) - 1).fill(null),
-                        (forecastData.historical?.values?.[forecastData.historical.values.length - 1]),
+                        ...Array(
+                          (forecastData.historical?.values?.length || 1) - 1,
+                        ).fill(null),
+                        forecastData.historical?.values?.[
+                          forecastData.historical.values.length - 1
+                        ],
                         ...(forecastData.forecast || []),
                       ],
                       borderColor: "#10b981",
@@ -449,8 +502,12 @@ export default function Forecasts() {
                     {
                       label: "Confidence Upper",
                       data: [
-                        ...Array((forecastData.historical?.values?.length || 1) - 1).fill(null),
-                        (forecastData.historical?.values?.[forecastData.historical.values.length - 1]),
+                        ...Array(
+                          (forecastData.historical?.values?.length || 1) - 1,
+                        ).fill(null),
+                        forecastData.historical?.values?.[
+                          forecastData.historical.values.length - 1
+                        ],
                         ...(forecastData.confidence_bounds?.upper || []),
                       ],
                       borderColor: "#10b981",
@@ -464,8 +521,12 @@ export default function Forecasts() {
                     {
                       label: "Confidence Lower",
                       data: [
-                        ...Array((forecastData.historical?.values?.length || 1) - 1).fill(null),
-                        (forecastData.historical?.values?.[forecastData.historical.values.length - 1]),
+                        ...Array(
+                          (forecastData.historical?.values?.length || 1) - 1,
+                        ).fill(null),
+                        forecastData.historical?.values?.[
+                          forecastData.historical.values.length - 1
+                        ],
                         ...(forecastData.confidence_bounds?.lower || []),
                       ],
                       borderColor: "#10b981",
@@ -482,41 +543,42 @@ export default function Forecasts() {
                   responsive: true,
                   maintainAspectRatio: false,
                   interaction: {
-                    mode: 'index',
+                    mode: "index",
                     intersect: false,
                   },
                   scales: {
                     y: {
+                      min: 0,
                       beginAtZero: false,
-                      grace: '10%',
+                      grace: "10%",
                       title: {
                         display: true,
                         text: selectedColumn,
                         font: {
                           size: 14,
-                          weight: 'bold'
-                        }
+                          weight: "bold",
+                        },
                       },
                       ticks: {
-                        callback: function(value) {
-                          return '$' + value.toLocaleString();
+                        callback: function (value) {
+                          return "$" + value.toLocaleString();
                         },
                         font: {
-                          size: 12
+                          size: 12,
                         },
-                        padding: 10
+                        padding: 10,
                       },
                       grid: {
-                        color: 'rgba(200, 200, 200, 0.1)',
-                        drawBorder: true
-                      }
+                        color: "rgba(200, 200, 200, 0.1)",
+                        drawBorder: true,
+                      },
                     },
-                    x: xScaleConfig
+                    x: xScaleConfig,
                   },
                   plugins: {
                     legend: {
                       display: true,
-                      position: 'top',
+                      position: "top",
                     },
                     zoom: {
                       zoom: {
@@ -527,24 +589,24 @@ export default function Forecasts() {
                         pinch: {
                           enabled: true,
                         },
-                        mode: 'xy',
+                        mode: "x",
                         onZoomStart() {},
-                        onZoom({chart}) {
-                          chart.scales.y.options.grace = '10%';
+                        onZoom({ chart }) {
+                          chart.scales.y.options.grace = "10%";
                         },
-                        onZoomComplete({chart}) {}
+                        onZoomComplete({ chart }) {},
                       },
                       pan: {
                         enabled: true,
-                        mode: 'xy',
-                        onPan({chart}) {}
+                        mode: "x",
+                        onPan({ chart }) {},
                       },
                       limits: {
-                        x: { min: 'original', max: 'original' },
-                        y: { min: 'original', max: 'original' }
-                      }
-                    }
-                  }
+                        x: { min: "original", max: "original" },
+                        y: { min: "original", max: "original" },
+                      },
+                    },
+                  },
                 }}
               />
             </div>
@@ -564,9 +626,21 @@ export default function Forecasts() {
                   {forecastData?.dates?.map((date, index) => (
                     <tr key={index}>
                       <td>{date}</td>
-                      <td>${forecastData?.forecast?.[index]?.toFixed(2) || "N/A"}</td>
-                      <td>${forecastData?.confidence_bounds?.lower?.[index]?.toFixed(2) || "N/A"}</td>
-                      <td>${forecastData?.confidence_bounds?.upper?.[index]?.toFixed(2) || "N/A"}</td>
+                      <td>
+                        ${forecastData?.forecast?.[index]?.toFixed(2) || "N/A"}
+                      </td>
+                      <td>
+                        $
+                        {forecastData?.confidence_bounds?.lower?.[
+                          index
+                        ]?.toFixed(2) || "N/A"}
+                      </td>
+                      <td>
+                        $
+                        {forecastData?.confidence_bounds?.upper?.[
+                          index
+                        ]?.toFixed(2) || "N/A"}
+                      </td>
                     </tr>
                   ))}
                 </tbody>

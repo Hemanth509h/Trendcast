@@ -316,6 +316,7 @@ export default function Salesdata() {
               justifyContent: "center",
               alignItems: "center",
               gap: 10,
+              marginTop: 20
             }}
           >
             <Upload size={20} style={{ color: "#4866ca" }} />
@@ -337,7 +338,7 @@ export default function Salesdata() {
 
           <p
             className="dialog-instruction"
-            style={{ marginTop: "15px", textAlign: "center" }}
+            style={{ margin: "15px 0", textAlign: "center" }}
           >
             Please select a CSV file containing your sales data. Ensure the file
             follows the required format.

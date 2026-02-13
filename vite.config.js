@@ -9,7 +9,6 @@ export default defineConfig({
     port: 5000,
     allowedHosts: true,
 
-    // 🔥 Force file watching
     watch: {
       usePolling: true,
       interval: 300,
