@@ -60,15 +60,18 @@
 .sales-table table {
   width: 100%;
   max-width: 1400px;
-  border-collapse: collapse;
+  border-collapse: separate;
+  border-spacing: 0;
   background: #ffffff;
   border-radius: 8px;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+  overflow: hidden;
+  border: 1px solid #eef2f6;
 }
 
 /* Header */
 .sales-table thead {
-  background: linear-gradient(135deg, #0f61db, #4a90e2);
+  background: #f8fafc;
   position: sticky;
   top: 0;
   z-index: 10;
@@ -76,21 +79,25 @@
 
 /* Header Cells */
 .sales-table th {
-  padding: 14px 12px;
-  text-align: center;
-  letter-spacing: 0.5px;
-  color: #ffffff;
+  padding: 16px 20px;
+  text-align: left;
+  letter-spacing: 0.025em;
+  color: #64748b;
   font-weight: 600;
   white-space: nowrap;
+  font-size: 12px;
+  text-transform: uppercase;
+  border-bottom: 2px solid #eef2f6;
 }
 
 /* Body Cells */
 .sales-table td {
-  padding: 12px;
-  text-align: center;
-  border-bottom: 1px solid #f0f0f0;
+  padding: 16px 20px;
+  text-align: left;
+  border-bottom: 1px solid #f1f5f9;
   transition: background-color 0.2s ease;
   font-size: 14px;
+  color: #334155;
 }
 
 /* Row Hover */
@@ -99,13 +106,12 @@
 }
 
 .sales-table tbody tr:hover {
-  background: #f0f7ff !important;
-  box-shadow: inset 0 0 8px rgba(79, 172, 254, 0.1);
+  background: #f1f5f9 !important;
 }
 
 /* Zebra Striping */
 .sales-table tbody tr:nth-child(even) {
-  background: #fafbfc;
+  background: #fcfdfe;
 }
 
 /* Fade Animation */

@@ -266,13 +266,13 @@ export default function Salesdata() {
                       <td>
                         <div style={{ display: "flex", gap: 10 }}>
                           <button
-                            className="btn btn-refrash"
+                            className="btn btn-edit-small"
                             onClick={() => handlededit(record)}
                           >
                             Edit
                           </button>
                           <button
-                            className="btn btn-clear"
+                            className="btn btn-delete-small"
                             onClick={() => handledeleterecord(record)}
                           >
                             Delete
