@@ -24,8 +24,10 @@ async def upload_file(file: UploadFile = File(...)):
     
     data = df.to_dict(orient='records')
     with open(DATA_FILE, 'w') as f:
-        json.dump({"data": data}, f)
-    return {"filename": file.filename, "records": len(data)}
+        json.dump({"data": data,
+                   "filename": file.filename,
+                    "record_count": len(data)}, f)
+    return {"message": "File uploaded and data stored successfully" }
 
 @router.get("/salesdata")
 async def get_sales_data():

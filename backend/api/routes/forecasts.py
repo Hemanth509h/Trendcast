@@ -13,7 +13,7 @@ router = APIRouter()
 DATA_FILE = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "data.json")
 
 class ForecastRequest(BaseModel):
-    column: str = "Sales"
+    column: str = "Weekly_Sales"
     horizon: int = 30
     model: str = "timeseries"
 
