@@ -33,7 +33,6 @@ async def get_sales_data():
         raise HTTPException(status_code=404, detail="Data file not found")
     with open(DATA_FILE, 'r') as f:
         data = json.load(f)
-    time.sleep(0.5)
     return data
 
 @router.get("/delete")
