@@ -50,12 +50,8 @@ waitForPort = 8000
 localPort = 5000
 externalPort = 80
 
-[[ports]]
-localPort = 8000
-externalPort = 8000
-
 [deployment]
 deploymentTarget = "autoscale"
 build = ["npm", "run", "build"]
 publicDir = "dist"
-run = ["gunicorn", "--bind", "0.0.0.0:5000", "main:app"]
+run = ["bash", "-c", "cd /home/runner/workspace/backend && uv run uvicorn main:app --host 0.0.0.0 --port 5000"]
