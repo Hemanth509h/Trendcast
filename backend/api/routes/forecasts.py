@@ -7,6 +7,8 @@ from pydantic import BaseModel
 from sklearn.preprocessing import PolynomialFeatures
 from sklearn.linear_model import Ridge
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
+from api.ai_service import get_ai_forecast, client as gemini_client
+from google.genai import types
 
 router = APIRouter()
 
@@ -16,6 +18,47 @@ class ForecastRequest(BaseModel):
     column: str = "Weekly_Sales"
     horizon: int = 30
     model: str = "timeseries"
+
+class ChatRequest(BaseModel):
+    message: str
+    context: list = []
+
+@router.post("/chat")
+async def chat_with_ai(req: ChatRequest):
+    try:
+        response = gemini_client.models.generate_content(
+            model="gemini-2.0-flash",
+            contents=req.message,
+            config=types.GenerateContentConfig(max_output_tokens=2048)
+        )
+        return {"response": response.text}
+    except Exception as e:
+        error_msg = str(e)
+        if "429" in error_msg or "RESOURCE_EXHAUSTED" in error_msg:
+             raise HTTPException(status_code=429, detail="Gemini API Quota Exceeded. Please check your API key limits.")
+        raise HTTPException(status_code=500, detail=error_msg)
+
+@router.get("/ai-insights")
+async def get_ai_insights():
+    try:
+        if not os.path.exists(DATA_FILE):
+            raise HTTPException(status_code=400, detail="No data available")
+
+        with open(DATA_FILE, "r") as f:
+            dataset = json.load(f)
+        
+        df = pd.DataFrame(dataset.get('data', []))
+        if df.empty:
+            raise HTTPException(status_code=400, detail="No data available")
+            
+        summary = df.describe().to_string()
+        insights = get_ai_forecast(summary)
+        
+        # Parse insights into JSON if possible, otherwise return as text
+        # For simplicity, returning as text that the frontend can handle
+        return {"insights_text": insights}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/generateforecast")
 async def generate_forecast(req: ForecastRequest):
