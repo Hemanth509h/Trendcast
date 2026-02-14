@@ -161,11 +161,19 @@ const AIAnalysis = () => {
         return;
       }
 
-      const df_total = dataJson.data;
+      // Truncate data context if it's too large to prevent context window issues
+      let dataToAnalyze = df_total;
+      if (df_total.length > 100) {
+        dataToAnalyze = df_total.slice(0, 100);
+        console.warn("Data context truncated to 100 records for AI analysis");
+      }
+
       const prompt = `
         Automated Data Analysis Report Request:
-        Analyze the ENTIRE imported dataset provided below:
-        ${JSON.stringify(df_total, null, 2)}
+        Analyze the imported dataset provided below (showing first 100 records):
+        ${JSON.stringify(dataToAnalyze, null, 2)}
+        
+        Total records in dataset: ${df_total.length}
         
         Tasks:
         1. 5 Detailed Key Insights from this specific data.
@@ -235,10 +243,18 @@ const AIAnalysis = () => {
 
       let contextualPrompt = input;
       if (dataContext) {
+        // Truncate data context for chat as well
+        let chatDataContext = dataContext;
+        if (dataContext.length > 50) {
+          chatDataContext = dataContext.slice(0, 50);
+        }
+
         contextualPrompt = `
           The user is asking a question about their business data.
-          Here is a sample of their current dataset:
-          ${JSON.stringify(dataContext, null, 2)}
+          Here is a sample of their current dataset (first 50 records):
+          ${JSON.stringify(chatDataContext, null, 2)}
+          
+          Total records available: ${dataContext.length}
           
           User Question: "${input}"
           
