@@ -16,14 +16,26 @@ author = "agent"
 
 [[workflows.workflow.tasks]]
 task = "workflow.run"
-args = "Frontend (Vite)"
+args = "Backend API"
 
 [[workflows.workflow.tasks]]
 task = "workflow.run"
-args = "Backend (Flask) Service"
+args = "Frontend"
 
 [[workflows.workflow]]
-name = "Frontend (Vite)"
+name = "Backend API"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "cd backend && python -m uvicorn main:app --host 0.0.0.0 --port 8000 --reload"
+waitForPort = 8000
+
+[workflows.workflow.metadata]
+outputType = "console"
+
+[[workflows.workflow]]
+name = "Frontend"
 author = "agent"
 
 [[workflows.workflow.tasks]]
@@ -34,25 +46,9 @@ waitForPort = 5000
 [workflows.workflow.metadata]
 outputType = "webview"
 
-[[workflows.workflow]]
-name = "Backend (Flask) Service"
-author = "agent"
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "python backend/main.py"
-waitForPort = 8000
-
-[workflows.workflow.metadata]
-outputType = "console"
-
 [[ports]]
 localPort = 5000
 externalPort = 80
-
-[[ports]]
-localPort = 5001
-externalPort = 3001
 
 [[ports]]
 localPort = 8000
@@ -62,4 +58,4 @@ externalPort = 8000
 deploymentTarget = "autoscale"
 build = ["npm", "run", "build"]
 publicDir = "dist"
-run = ["gunicorn", "--bind", "0.0.0.0:5000", "main:app"]
+run = ["bash", "-c", "cd backend && python -m uvicorn main:app --host 0.0.0.0 --port 5000"]
