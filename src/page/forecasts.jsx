@@ -326,6 +326,8 @@ export default function Forecasts() {
           fill: true,
           tension: 0.4,
           borderWidth: 2,
+          pointRadius: 4,
+          pointHoverRadius: 6,
         },
         {
           label: "Trend",
@@ -339,6 +341,8 @@ export default function Forecasts() {
           fill: false,
           tension: 0.4,
           borderWidth: 2,
+          pointRadius: 4,
+          pointHoverRadius: 6,
         },
         {
           label: "Forecast",
@@ -357,6 +361,8 @@ export default function Forecasts() {
           fill: true,
           tension: 0.4,
           borderWidth: 2,
+          pointRadius: 4,
+          pointHoverRadius: 6,
         },
       ];
     }
@@ -373,7 +379,10 @@ export default function Forecasts() {
           fill: false,
           tension: 0.4,
           borderWidth: 1,
-          pointRadius: 0,
+          pointRadius: 4,
+          pointHoverRadius: 6,
+          pointBackgroundColor: color,
+          showLine: true,
         },
         {
           label: `${res.column} (Fcst)`,
@@ -388,6 +397,8 @@ export default function Forecasts() {
           fill: false,
           tension: 0.4,
           borderWidth: 2,
+          pointRadius: 4,
+          pointHoverRadius: 6,
         }
       ];
     });
