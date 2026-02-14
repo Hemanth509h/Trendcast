@@ -126,10 +126,10 @@ const AIAnalysis = () => {
     // Load data context for both automated analysis and chat
     const loadData = async () => {
       try {
-        const response = await fetch("/api/data");
+        const response = await fetch("/api/salesdata");
         const json = await response.json();
         if (json.data && json.data.length > 0) {
-          setDataContext(json.data.slice(-50));
+          setDataContext(json.data);
         }
       } catch (e) {
         console.error("Failed to load data context", e);
@@ -152,7 +152,7 @@ const AIAnalysis = () => {
     setLoading(true);
     setAnalysis(null);
     try {
-      const dataResponse = await fetch("/api/data");
+      const dataResponse = await fetch("/api/salesdata");
       const dataJson = await dataResponse.json();
       
       if (!dataJson.data || dataJson.data.length === 0) {
@@ -161,15 +161,16 @@ const AIAnalysis = () => {
         return;
       }
 
-      const df_sample = dataJson.data.slice(0, 20);
+      const df_total = dataJson.data;
       const prompt = `
-        Analyze the following dataset sample:
-        ${JSON.stringify(df_sample, null, 2)}
+        Automated Data Analysis Report Request:
+        Analyze the ENTIRE imported dataset provided below:
+        ${JSON.stringify(df_total, null, 2)}
         
-        Provide:
-        1. 3-5 Key Insights from this data.
-        2. 2-3 Strategic Ideas for improvement or growth.
-        3. Identification of any potential anomalies or trends.
+        Tasks:
+        1. 5 Detailed Key Insights from this specific data.
+        2. 3 Strategic Insights for future business growth based on trends found in these dates.
+        3. Identification of any potential anomalies or patterns.
         
         Format the response as a clear JSON object with keys: 'insights', 'ideas', 'trends'. Each value should be an array of strings.
       `;
