@@ -155,32 +155,34 @@ const AIAnalysis = () => {
       const dataResponse = await fetch("/api/salesdata");
       const dataJson = await dataResponse.json();
       
+      console.log("Data fetched for analysis:", dataJson);
+
       if (!dataJson.data || dataJson.data.length === 0) {
         toast("No data available for analysis. Please import data first.", "error");
         setLoading(false);
         return;
       }
 
-      // Truncate data context if it's too large to prevent context window issues
+      const df_total = dataJson.data;
+      // Truncate data context more aggressively to be safe
       let dataToAnalyze = df_total;
-      if (df_total.length > 100) {
-        dataToAnalyze = df_total.slice(0, 100);
-        console.warn("Data context truncated to 100 records for AI analysis");
+      if (df_total.length > 30) {
+        dataToAnalyze = df_total.slice(0, 30);
+        console.warn("Data context truncated to 30 records for AI analysis");
       }
 
       const prompt = `
-        Automated Data Analysis Report Request:
-        Analyze the imported dataset provided below (showing first 100 records):
-        ${JSON.stringify(dataToAnalyze, null, 2)}
+        Analyze this business data (first 30 records):
+        ${JSON.stringify(dataToAnalyze)}
         
-        Total records in dataset: ${df_total.length}
+        Total records: ${df_total.length}
         
-        Tasks:
-        1. 5 Detailed Key Insights from this specific data.
-        2. 3 Strategic Insights for future business growth based on trends found in these dates.
-        3. Identification of any potential anomalies or patterns.
+        Provide:
+        1. 5 Detailed Key Insights.
+        2. 3 Strategic Insights.
+        3. Potential anomalies.
         
-        Format the response as a clear JSON object with keys: 'insights', 'ideas', 'trends'. Each value should be an array of strings.
+        Response MUST be valid JSON: {"insights": [], "ideas": [], "trends": []}
       `;
 
       if (typeof puter === 'undefined') {
@@ -189,7 +191,9 @@ const AIAnalysis = () => {
           return;
       }
 
+      console.log("Sending prompt to AI:", prompt);
       const response = await puter.ai.chat(prompt, { model: "gpt-4o" });
+      console.log("AI Response received:", response);
 
       let content = "";
       if (typeof response === 'string') {
@@ -245,42 +249,28 @@ const AIAnalysis = () => {
       if (dataContext) {
         // Truncate data context for chat as well
         let chatDataContext = dataContext;
-        if (dataContext.length > 50) {
-          chatDataContext = dataContext.slice(0, 50);
+        if (dataContext.length > 20) {
+          chatDataContext = dataContext.slice(0, 20);
         }
 
         contextualPrompt = `
-          The user is asking a question about their business data.
-          Here is a sample of their current dataset (first 50 records):
-          ${JSON.stringify(chatDataContext, null, 2)}
+          Analyze this business data (first 20 records):
+          ${JSON.stringify(chatDataContext)}
           
-          Total records available: ${dataContext.length}
+          Total records: ${dataContext.length}
           
           User Question: "${input}"
           
-          Please analyze the data and answer the user's question directly based on the provided dataset.
-          
-          IF the user's question would be better answered with a visualization (like a trend or comparison), 
-          include a JSON block in your response using this format:
-          
+          If a chart is better, use this JSON format:
           \`\`\`json
           {
             "chartType": "bar" | "line",
             "chartData": {
-              "labels": ["Label 1", "Label 2", ...],
-              "datasets": [
-                {
-                  "label": "Dataset Name",
-                  "data": [10, 20, ...],
-                  "backgroundColor": "rgba(75, 192, 192, 0.6)",
-                  "borderColor": "rgba(75, 192, 192, 1)"
-                }
-              ]
+              "labels": [],
+              "datasets": [{"label": "", "data": []}]
             }
           }
           \`\`\`
-          
-          Provide a helpful text explanation alongside the chart.
         `;
       }
 
