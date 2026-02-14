@@ -706,8 +706,9 @@ export default function Forecasts() {
                   responsive: true,
                   maintainAspectRatio: false,
                   interaction: {
-                    mode: "index",
-                    intersect: false,
+                    mode: "nearest",
+                    axis: "xy",
+                    intersect: true,
                   },
                   scales: {
                     y: {
