@@ -379,7 +379,7 @@ export default function Forecasts() {
           fill: false,
           tension: 0.4,
           borderWidth: 1,
-          pointRadius: 4,
+          pointRadius: 2,
           pointHoverRadius: 6,
           pointBackgroundColor: color,
           showLine: true,
