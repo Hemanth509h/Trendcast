@@ -16,27 +16,7 @@ author = "agent"
 
 [[workflows.workflow.tasks]]
 task = "workflow.run"
-args = "Start backend"
-
-[[workflows.workflow.tasks]]
-task = "workflow.run"
 args = "Frontend (Vite)"
-
-[[workflows.workflow.tasks]]
-task = "workflow.run"
-args = "Backend (Flask) Service"
-
-[[workflows.workflow]]
-name = "Start backend"
-author = "agent"
-
-[workflows.workflow.metadata]
-outputType = "console"
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "cd /home/runner/workspace/backend && uv run uvicorn main:app --host 0.0.0.0 --port 8000 --reload"
-waitForPort = 8000
 
 [[workflows.workflow]]
 name = "Frontend (Vite)"
@@ -49,17 +29,6 @@ waitForPort = 5000
 
 [workflows.workflow.metadata]
 outputType = "webview"
-
-[[workflows.workflow]]
-name = "Backend (Flask) Service"
-author = "agent"
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "cd /home/runner/workspace/backend && uv run python main.py"
-
-[workflows.workflow.metadata]
-outputType = "console"
 
 [[ports]]
 localPort = 5000
