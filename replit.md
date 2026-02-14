@@ -23,12 +23,17 @@ A React-based sales data visualization and forecasting application built with Vi
 - FastAPI, Pandas, NumPy, scikit-learn (backend)
 
 ## Development
-- Frontend: Vite dev server on port 5000 (workflow: "Start application")
-- Backend: Uvicorn dev server on port 8000 (workflow: "Start backend")
+- Frontend: Vite dev server on port 5000 (workflow: "Frontend")
+- Backend: Uvicorn dev server on port 8000 (workflow: "Backend API")
 - Vite proxies `/api` requests to the FastAPI backend at localhost:8000
 
 ## Build
 Run `npm run build` to create a production build.
+
+## Deployment
+- Target: autoscale
+- Build: `npm run build`
+- Run: Gunicorn with Uvicorn workers serving FastAPI on port 5000
 
 ## Recent Changes
 - Migrated from external deployment to Replit environment
