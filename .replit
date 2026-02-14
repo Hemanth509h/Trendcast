@@ -53,6 +53,6 @@ externalPort = 80
 
 [deployment]
 deploymentTarget = "autoscale"
-build = ["npm", "run", "build"]
+build = ["bash", "-c", "npm run build"]
 publicDir = "dist"
-run = ["bash", "-c", "cd backend && gunicorn --bind 0.0.0.0:5000 --reuse-port -w 4 main:app -k uvicorn.workers.UvicornWorker"]
+run = ["bash", "-c", "cd backend && gunicorn -k uvicorn.workers.UvicornWorker -b 0.0.0.0:5000 main:app"]
