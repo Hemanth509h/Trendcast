@@ -51,6 +51,7 @@ export default function Forecasts() {
   const [isAllColumnsMode, setIsAllColumnsMode] = React.useState(false);
   const [isSelectionModalOpen, setIsSelectionModalOpen] = React.useState(false);
   const [selectedColumnsToForecast, setSelectedColumnsToForecast] = React.useState([]);
+  const [zoomMode, setZoomMode] = React.useState("x"); // "x" or "xy"
 
   // ========== ALL REF HOOKS ==========
   const chartRef = React.useRef(null);
@@ -662,6 +663,23 @@ export default function Forecasts() {
               >
                 ↺ Reset Zoom
               </button>
+              <button
+                onClick={() => setZoomMode(zoomMode === "x" ? "xy" : "x")}
+                style={{
+                  padding: "8px 16px",
+                  backgroundColor: zoomMode === "xy" ? "#f59e0b" : "#94a3b8",
+                  color: "white",
+                  border: "none",
+                  borderRadius: "6px",
+                  cursor: "pointer",
+                  fontWeight: "600",
+                  fontSize: "14px",
+                  transition: "all 0.3s ease",
+                  boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+                }}
+              >
+                {zoomMode === "xy" ? "🔒 Unlock Y-Axis Zoom" : "🔓 Lock Y-Axis Zoom"}
+              </button>
             </div>
 
             <div
@@ -734,16 +752,18 @@ export default function Forecasts() {
                         pinch: {
                           enabled: true,
                         },
-                        mode: "x",
+                        mode: zoomMode,
                         onZoomStart() {},
                         onZoom({ chart }) {
-                          chart.scales.y.options.grace = "10%";
+                          if (zoomMode === "x") {
+                            chart.scales.y.options.grace = "10%";
+                          }
                         },
                         onZoomComplete({ chart }) {},
                       },
                       pan: {
                         enabled: true,
-                        mode: "x",
+                        mode: zoomMode,
                         onPan({ chart }) {},
                       },
                       limits: {
