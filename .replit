@@ -16,23 +16,15 @@ author = "agent"
 
 [[workflows.workflow.tasks]]
 task = "workflow.run"
-args = "Start application"
+args = "Start backend"
 
 [[workflows.workflow.tasks]]
 task = "workflow.run"
-args = "Start backend"
-
-[[workflows.workflow]]
-name = "Start application"
-author = "agent"
-
-[workflows.workflow.metadata]
-outputType = "webview"
+args = "Frontend (Vite)"
 
 [[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "cd /home/runner/workspace && npm run dev"
-waitForPort = 5000
+task = "workflow.run"
+args = "Backend (Flask) Service"
 
 [[workflows.workflow]]
 name = "Start backend"
@@ -46,13 +38,32 @@ task = "shell.exec"
 args = "cd /home/runner/workspace/backend && uv run uvicorn main:app --host 0.0.0.0 --port 8000 --reload"
 waitForPort = 8000
 
+[[workflows.workflow]]
+name = "Frontend (Vite)"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "npm run dev -- --host 0.0.0.0 --port 5000"
+waitForPort = 5000
+
+[workflows.workflow.metadata]
+outputType = "webview"
+
+[[workflows.workflow]]
+name = "Backend (Flask) Service"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "cd /home/runner/workspace/backend && uv run python main.py"
+
+[workflows.workflow.metadata]
+outputType = "console"
+
 [[ports]]
 localPort = 5000
 externalPort = 80
-
-[[ports]]
-localPort = 5001
-externalPort = 3000
 
 [[ports]]
 localPort = 8000
