@@ -9,10 +9,12 @@ import {
   Loader2,
 } from "lucide-react";
 import "./ui.css";
+import { label } from 'framer-motion/client';
 
 const path = [
   { lable: "Sales Data", icon: TableProperties, href: "/Sales" },
   { lable: "Forecasts", icon: TrendingUp, href: "/Forecasts" },
+{ label:"AIAnalysis" , icon: Sparkles,href:"/AIAnalysis"}
 ];
 
 export function Sidebar() {
