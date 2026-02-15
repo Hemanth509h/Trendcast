@@ -18,7 +18,7 @@ class ForecastRequest(BaseModel):
     column: str = "Weekly_Sales"
     horizon: int = 30
     model: str = "timeseries"
-    group_by: str = None  # New: "Region" or "Product_Category"
+    group_by: str | None = None  # Use Union type for compatibility
 
 class ChatRequest(BaseModel):
     message: str
@@ -77,13 +77,14 @@ async def generate_forecast(req: ForecastRequest):
         if df.empty or 'Date' not in df.columns or column not in df.columns:
             raise HTTPException(status_code=400, detail="Insufficient data for forecasting")
 
-        df['Date'] = pd.to_datetime(df['Date'], dayfirst=True, errors='coerce')
+        df['Date'] = pd.to_datetime(df['Date'], dayfirst=False, errors='coerce')
         if df['Date'].isna().any():
-             df.loc[df['Date'].isna(), 'Date'] = pd.to_datetime(df[df['Date'].isna()]['Date'], errors='coerce')
+             # Try other format
+             df.loc[df['Date'].isna(), 'Date'] = pd.to_datetime(df[df['Date'].isna()]['Date'], dayfirst=True, errors='coerce')
         
-        df = df.dropna(subset=['Date'])
+        df = df.dropna(subset=['Date', column])
         if df.empty:
-            raise HTTPException(status_code=400, detail="No valid dates found in data")
+            raise HTTPException(status_code=400, detail="No valid data found in selected column")
             
         df = df.sort_values('Date').reset_index(drop=True)
         
@@ -129,6 +130,17 @@ async def generate_forecast(req: ForecastRequest):
         daily_data['Month'] = daily_data['Date'].dt.month
         
         values = daily_data[column].values
+        # Filter out zero values for factor calculation to avoid division by zero
+        mean_val = daily_data[column].mean()
+        if mean_val == 0 or np.isnan(mean_val):
+            mean_val = 1.0
+
+        dow_means = daily_data.groupby('DayOfWeek')[column].mean()
+        dow_factors = dow_means / mean_val
+        
+        month_means = daily_data.groupby('Month')[column].mean()
+        month_factors = month_means / mean_val
+        
         X = np.arange(len(values)).reshape(-1, 1)
         poly = PolynomialFeatures(degree=2)
         X_poly = poly.fit_transform(X)
@@ -143,9 +155,6 @@ async def generate_forecast(req: ForecastRequest):
         ridge.fit(X_train, y_train)
         trend = ridge.predict(X_poly)
         
-        dow_factors = daily_data.groupby('DayOfWeek')[column].mean() / (daily_data[column].mean() or 1.0)
-        month_factors = daily_data.groupby('Month')[column].mean() / (daily_data[column].mean() or 1.0)
-        
         last_date = daily_data['Date'].max()
         future_dates_dt = [last_date + pd.Timedelta(days=i) for i in range(1, horizon + 1)]
         
@@ -154,14 +163,17 @@ async def generate_forecast(req: ForecastRequest):
         upper_bounds = []
         
         all_predictions = ridge.predict(X_poly)
-        residuals = values - all_predictions
-        std_error = np.std(residuals) if len(residuals) > 0 else (values.std() or 1.0)
+        # Ensure values and all_predictions have same shape for residuals
+        residuals = values.flatten() - all_predictions.flatten()
+        std_error = np.std(residuals) if len(residuals) > 0 else (np.std(values) or 1.0)
         
         for i, f_date in enumerate(future_dates_dt):
             future_x = np.array([[len(values) + i]])
             future_x_poly = poly.transform(future_x)
             trend_pred = ridge.predict(future_x_poly)[0]
             
+            # Month is 1-12, but factors might be indexed 0-11 or 1-12 depending on pandas
+            # Check if factors exist before getting
             dow_factor = dow_factors.get(f_date.dayofweek, 1.0)
             month_factor = month_factors.get(f_date.month, 1.0)
             
@@ -184,7 +196,7 @@ async def generate_forecast(req: ForecastRequest):
             "dates": [d.strftime('%Y-%m-%d') for d in future_dates_dt],
             "historical": {
                 "dates": daily_data['Date'].dt.strftime('%Y-%m-%d').tolist(),
-                "values": daily_data[column].tolist(),
+                "values": values.tolist(),
                 "trend": trend.tolist()
             },
             "confidence_bounds": {"lower": lower_bounds, "upper": upper_bounds},

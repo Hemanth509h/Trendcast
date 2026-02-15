@@ -1,7 +1,5 @@
 // API base URL configuration
-const API_BASE_URL = import.meta.env.PROD
-  ? 'https://trendcast.onrender.com'
-  : '';
+const API_BASE_URL = '';
 
 export const getApiUrl = (endpoint) => {
   return `${API_BASE_URL}${endpoint}`;
