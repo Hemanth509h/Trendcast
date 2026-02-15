@@ -142,33 +142,6 @@ async def generate_forecast(req: ForecastRequest):
         mse = mean_squared_error(values, all_predictions)
         r2 = r2_score(values, all_predictions)
 
-        # AI Recommendations Logic
-        try:
-            forecast_df = pd.DataFrame({"Date": future_dates_dt, "Forecast": forecast_results})
-            forecast_summary = forecast_df.describe().to_string()
-            
-            prompt = f"""
-            Analyze the following sales forecast for column '{column}' over the next {horizon} days.
-            Forecast Summary:
-            {forecast_summary}
-            
-            Provide specific actionable recommendations in a short bulleted list:
-            1. Which weeks/periods show the highest growth?
-            2. Which products/categories should be increased (if applicable)?
-            3. What specific business actions should be taken?
-            
-            Keep the response concise and data-driven.
-            """
-            
-            ai_response = gemini_client.models.generate_content(
-                model="gemini-2.0-flash",
-                contents=prompt,
-                config=types.GenerateContentConfig(max_output_tokens=1024)
-            )
-            recommendations = ai_response.text
-        except Exception as e:
-            recommendations = "AI recommendations currently unavailable. Please check your data and API key."
-
         return {
             "forecast": forecast_results,
             "dates": [d.strftime('%Y-%m-%d') for d in future_dates_dt],
@@ -183,8 +156,7 @@ async def generate_forecast(req: ForecastRequest):
                 "mse": float(mse),
                 "r2": float(r2),
                 "rmse": float(np.sqrt(mse))
-            },
-            "recommendations": recommendations
+            }
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
