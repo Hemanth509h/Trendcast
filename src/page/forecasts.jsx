@@ -17,19 +17,34 @@ import {
   Filler,
 } from "chart.js";
 import zoomPlugin from "chartjs-plugin-zoom";
-import { Line } from "react-chartjs-2";
+import { Line, Bar, Pie } from "react-chartjs-2";
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  BarElement,
+  ArcElement,
+  Title,
+  Tooltip,
+  Legend,
+  Filler,
+} from "chart.js";
+import zoomPlugin from "chartjs-plugin-zoom";
 
 ChartJS.register(
   CategoryScale,
   LinearScale,
   PointElement,
   LineElement,
+  BarElement,
+  ArcElement,
   Title,
   Tooltip,
   Legend,
-  Filler,
+  Filler
 );
-ChartJS.register(zoomPlugin);
 
 export default function Forecasts() {
   // ========== ALL STATE HOOKS AT TOP ==========
@@ -43,6 +58,8 @@ export default function Forecasts() {
   const [selectedColumn, setSelectedColumn] = React.useState("");
   const [selectedHorizon, setSelectedHorizon] = React.useState("12");
   const [selectmodel, setselectmodel] = React.useState("timeseries");
+  const [groupBy, setGroupBy] = React.useState(""); // New
+  const [chartType, setChartType] = React.useState("line"); // New
   const [forecastData, setForecastData] = React.useState(null);
   const [metrics, setMetrics] = React.useState(null);
   const [isLoading, setIsLoading] = React.useState(false);
@@ -153,6 +170,7 @@ export default function Forecasts() {
           column: selectedColumn,
           horizon: parseInt(selectedHorizon),
           model: selectmodel,
+          group_by: groupBy || null,
         }),
       });
 
@@ -316,6 +334,17 @@ export default function Forecasts() {
   const getDatasets = () => {
     if (!forecastData) return [];
     
+    if (forecastData.is_grouped) {
+      const colors = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4', '#f97316'];
+      return Object.entries(forecastData.groups).map(([group, data], idx) => ({
+        label: group,
+        data: chartType === 'pie' ? [data.forecast.reduce((a, b) => a + b, 0)] : [...Array(data.historical.length).fill(null), ...data.forecast],
+        backgroundColor: colors[idx % colors.length],
+        borderColor: colors[idx % colors.length],
+        borderWidth: 1
+      }));
+    }
+
     if (!forecastData.isAll) {
       return [
         {
@@ -469,6 +498,24 @@ export default function Forecasts() {
           </select>
         </label>
 
+        <label>
+          Group By:
+          <select className="select-column" value={groupBy} onChange={(e) => setGroupBy(e.target.value)}>
+            <option value="">No Grouping</option>
+            <option value="Region">Region</option>
+            <option value="Product_Category">Product Category</option>
+          </select>
+        </label>
+
+        <label>
+          Chart Type:
+          <select className="select-column" value={chartType} onChange={(e) => setChartType(e.target.value)}>
+            <option value="line">Line Chart</option>
+            <option value="bar">Bar Chart</option>
+            <option value="pie">Pie Chart (Forecast Total)</option>
+          </select>
+        </label>
+
         <button
           className="btn btn-generate"
           onClick={handleGenerateForecast}
@@ -617,7 +664,7 @@ export default function Forecasts() {
           )}
 
           <div className="forecast-results">
-            <h2>Forecast Chart</h2>
+            <h2>Forecast Chart ({chartType.charAt(0).toUpperCase() + chartType.slice(1)})</h2>
 
             <div style={{ marginBottom: "15px", display: "flex", gap: "10px" }}>
               <button

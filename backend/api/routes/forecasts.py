@@ -18,6 +18,7 @@ class ForecastRequest(BaseModel):
     column: str = "Weekly_Sales"
     horizon: int = 30
     model: str = "timeseries"
+    group_by: str = None  # New: "Region" or "Product_Category"
 
 class ChatRequest(BaseModel):
     message: str
@@ -85,6 +86,42 @@ async def generate_forecast(req: ForecastRequest):
             raise HTTPException(status_code=400, detail="No valid dates found in data")
             
         df = df.sort_values('Date').reset_index(drop=True)
+        
+        group_by = req.group_by
+        if group_by and group_by in df.columns:
+            # Multi-series forecast
+            all_groups = df[group_by].unique()
+            group_forecasts = {}
+            
+            for group_val in all_groups:
+                group_df = df[df[group_by] == group_val]
+                if len(group_df) < 5: continue
+                
+                group_daily = group_df.groupby('Date')[column].sum().reset_index()
+                group_daily = group_daily.sort_values('Date').reset_index(drop=True)
+                
+                # Simplified linear trend for groups
+                g_values = group_daily[column].values
+                g_X = np.arange(len(g_values)).reshape(-1, 1)
+                g_ridge = Ridge(alpha=1.0)
+                g_ridge.fit(g_X, g_values)
+                
+                g_future_x = np.arange(len(g_values), len(g_values) + horizon).reshape(-1, 1)
+                g_forecast = g_ridge.predict(g_future_x)
+                
+                group_forecasts[str(group_val)] = {
+                    "forecast": [max(0, float(v)) for v in g_forecast],
+                    "historical": group_daily[column].tolist(),
+                    "dates": group_daily['Date'].dt.strftime('%Y-%m-%d').tolist()
+                }
+            
+            return {
+                "is_grouped": True,
+                "group_by": group_by,
+                "groups": group_forecasts,
+                "dates": [ (df['Date'].max() + pd.Timedelta(days=i)).strftime('%Y-%m-%d') for i in range(1, horizon + 1)]
+            }
+
         daily_data = df.groupby('Date')[column].sum().reset_index()
         daily_data = daily_data.sort_values('Date').reset_index(drop=True)
         

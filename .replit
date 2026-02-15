@@ -23,6 +23,10 @@ args = "Backend API"
 task = "workflow.run"
 args = "Frontend"
 
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Start application"
+
 [[workflows.workflow]]
 name = "Backend API"
 author = "agent"
@@ -47,6 +51,15 @@ task = "shell.exec"
 args = "npm run dev -- --host 0.0.0.0 --port 5000"
 waitForPort = 5000
 
+[[workflows.workflow]]
+name = "Start application"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "gunicorn --bind 0.0.0.0:5000 --reuse-port --reload main:app"
+waitForPort = 5000
+
 [[ports]]
 localPort = 5000
 externalPort = 80
@@ -59,7 +72,7 @@ externalPort = 8000
 deploymentTarget = "autoscale"
 build = ["npm", "run", "build"]
 publicDir = "dist"
-run = ["bash", "-c", "cd backend && python -m uvicorn main:app --host 0.0.0.0 --port 5000"]
+run = ["gunicorn", "--bind", "0.0.0.0:5000", "main:app"]
 
 [userenv]
 
