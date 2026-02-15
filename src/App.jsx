@@ -5,7 +5,6 @@ import { Route, Switch, useLocation } from "wouter";
 import Salesdata from "./page/salesdata";
 import { ToastContainer } from "./ui/toast";
 import Forecasts from "./page/forecasts";
-import AIAnalysis from "./page/aianalysis"
 
 function Router() {
   const [location, setLocation] = useLocation();
