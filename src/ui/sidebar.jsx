@@ -13,8 +13,7 @@ import "./ui.css";
 
 const path = [
   { lable: "Sales Data", icon: TableProperties, href: "/Sales" },
-  { lable: "Forecasts", icon: TrendingUp, href: "/Forecasts" },
-  { lable: "AI Analysis", icon: Sparkles, href: "/AIAnalysis" }
+  { lable: "Forecasts", icon: TrendingUp, href: "/Forecasts" }
 ];
 
 export function Sidebar() {
