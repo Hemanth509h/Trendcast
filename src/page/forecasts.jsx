@@ -497,6 +497,24 @@ export default function Forecasts() {
         </button>
       </div>
 
+      {forecastData?.recommendations && (
+        <div className="ai-recommendations-section" style={{
+          backgroundColor: "#f0fdf4",
+          border: "1px solid #bbf7d0",
+          borderRadius: "8px",
+          padding: "20px",
+          margin: "20px 0",
+          boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)"
+        }}>
+          <h2 style={{ color: "#166534", marginTop: 0, display: "flex", alignItems: "center", gap: "10px" }}>
+            ✨ AI Strategic Recommendations
+          </h2>
+          <div style={{ color: "#1e293b", lineHeight: "1.6", whiteSpace: "pre-wrap" }}>
+            {forecastData.recommendations}
+          </div>
+        </div>
+      )}
+
       <Dialog
         isopen={isSelectionModalOpen}
         isclose={() => setIsSelectionModalOpen(false)}
