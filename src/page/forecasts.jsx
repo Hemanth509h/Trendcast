@@ -5,18 +5,6 @@ import "../ui/ui.css";
 import { getApiUrl } from "../utils/api";
 import { Info } from "lucide-react";
 import Dialog from "../ui/Dialog";
-import {
-  Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  Title,
-  Tooltip,
-  Legend,
-  Filler,
-} from "chart.js";
-import zoomPlugin from "chartjs-plugin-zoom";
 import { Line, Bar, Pie } from "react-chartjs-2";
 import {
   Chart as ChartJS,
@@ -43,7 +31,8 @@ ChartJS.register(
   Title,
   Tooltip,
   Legend,
-  Filler
+  Filler,
+  zoomPlugin
 );
 
 export default function Forecasts() {
