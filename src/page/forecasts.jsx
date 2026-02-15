@@ -187,7 +187,7 @@ export default function Forecasts() {
 
     const numericColumns = Object.keys(salesdata[0]).filter(key => {
       const val = salesdata[0][key];
-      return typeof val === 'number' || (!isNaN(parseFloat(val)) && isFinite(val));
+      return (typeof val === 'number' || (!isNaN(parseFloat(val)) && isFinite(val))) && !['Date', 'Store_ID', 'Department'].includes(key);
     });
 
     if (numericColumns.length === 0) {
