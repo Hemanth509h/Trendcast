@@ -17,27 +17,11 @@ author = "agent"
 
 [[workflows.workflow.tasks]]
 task = "workflow.run"
-args = "Backend Server"
-
-[[workflows.workflow.tasks]]
-task = "workflow.run"
 args = "Frontend Server (Fixed)"
 
 [[workflows.workflow.tasks]]
 task = "workflow.run"
-args = "Backend Server (Fixed)"
-
-[[workflows.workflow]]
-name = "Backend Server"
-author = "agent"
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "cd backend && python main.py"
-waitForPort = 8000
-
-[workflows.workflow.metadata]
-outputType = "console"
+args = "Backend API Server"
 
 [[workflows.workflow]]
 name = "Frontend Server (Fixed)"
@@ -52,7 +36,7 @@ waitForPort = 5000
 outputType = "webview"
 
 [[workflows.workflow]]
-name = "Backend Server (Fixed)"
+name = "Backend API Server"
 author = "agent"
 
 [[workflows.workflow.tasks]]
