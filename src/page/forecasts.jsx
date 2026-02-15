@@ -740,99 +740,54 @@ export default function Forecasts() {
               </button>
             </div>
 
-            <div
-              className="chart-container"
-              style={{
-                height: "600px",
-                marginBottom: "40px",
-                background: "white",
-                padding: "20px",
-                borderRadius: "10px",
-                boxShadow: "0 4px 6px rgba(0,0,0,0.05)",
-              }}
-            >
-              <Line
-                ref={chartRef}
-                data={{
-                  labels: [
-                    ...(forecastData.historical?.dates || []),
-                    ...(forecastData.dates || []),
-                  ],
-                  datasets: getDatasets(),
-                }}
-                options={{
-                  responsive: true,
-                  maintainAspectRatio: false,
-                  interaction: {
-                    mode: "nearest",
-                    axis: "xy",
-                    intersect: true,
-                  },
-                  scales: {
-                    y: {
-                      min: 0,
-                      beginAtZero: false,
-                      grace: "10%",
-                      title: {
-                        display: true,
-                        text: selectedColumn,
-                        font: {
-                          size: 14,
-                          weight: "bold",
-                        },
-                      },
-                      ticks: {
-                        callback: function (value) {
-                          return value.toLocaleString();
-                        },
-                        font: {
-                          size: 12,
-                        },
-                        padding: 10,
-                      },
-                      grid: {
-                        color: "rgba(200, 200, 200, 0.1)",
-                        drawBorder: true,
-                      },
-                    },
-                    x: xScaleConfig,
-                  },
-                  plugins: {
-                    legend: {
-                      display: true,
-                      position: "top",
-                    },
-                    zoom: {
+            <div className="chart-container" style={{ position: 'relative', height: '600px', width: '100%', background: 'white', padding: '20px', borderRadius: '10px', boxShadow: '0 4px 6px rgba(0,0,0,0.05)' }}>
+              {chartType === 'line' && (
+                <Line
+                  ref={chartRef}
+                  data={{
+                    labels: [
+                      ...(forecastData.historical?.dates || []),
+                      ...(forecastData.dates || []),
+                    ],
+                    datasets: getDatasets(),
+                  }}
+                  options={{
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                      legend: { position: "top" },
                       zoom: {
-                        wheel: {
-                          enabled: true,
-                          speed: 0.1,
-                        },
-                        pinch: {
-                          enabled: true,
-                        },
-                        mode: zoomMode,
-                        onZoomStart() {},
-                        onZoom({ chart }) {
-                          if (zoomMode === "x") {
-                            chart.scales.y.options.grace = "10%";
-                          }
-                        },
-                        onZoomComplete({ chart }) {},
-                      },
-                      pan: {
-                        enabled: true,
-                        mode: zoomMode,
-                        onPan({ chart }) {},
-                      },
-                      limits: {
-                        x: { min: "original", max: "original" },
-                        y: { min: "original", max: "original" },
+                        zoom: { wheel: { enabled: true }, pinch: { enabled: true }, mode: zoomMode },
+                        pan: { enabled: true, mode: zoomMode },
                       },
                     },
-                  },
-                }}
-              />
+                    scales: {
+                      x: xScaleConfig,
+                      y: { beginAtZero: false, title: { display: true, text: "Value" } },
+                    },
+                  }}
+                />
+              )}
+              {chartType === 'bar' && (
+                <Bar
+                  data={{
+                    labels: forecastData.is_grouped 
+                      ? [...(Object.values(forecastData.groups)[0]?.dates || []), ...(forecastData.dates || [])]
+                      : [...(forecastData.historical?.dates || []), ...(forecastData.dates || [])],
+                    datasets: getDatasets(),
+                  }}
+                  options={{ responsive: true, maintainAspectRatio: false }}
+                />
+              )}
+              {chartType === 'pie' && forecastData.is_grouped && (
+                <Pie
+                  data={{
+                    labels: Object.keys(forecastData.groups),
+                    datasets: getDatasets(),
+                  }}
+                  options={{ responsive: true, maintainAspectRatio: false }}
+                />
+              )}
             </div>
 
             <h2>Forecast Results Table</h2>
