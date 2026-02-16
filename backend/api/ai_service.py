@@ -3,11 +3,18 @@ from google import genai
 from google.genai import types
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception
 
-# This is using Gemini API with a user-provided key
-# Reference: python_gemini_ai_integrations integration
-GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
+# This is using Replit's AI Integrations service for Gemini access.
+# It does not require your own API key and charges are billed to your credits.
+AI_INTEGRATIONS_GEMINI_API_KEY = os.environ.get("AI_INTEGRATIONS_GEMINI_API_KEY")
+AI_INTEGRATIONS_GEMINI_BASE_URL = os.environ.get("AI_INTEGRATIONS_GEMINI_BASE_URL")
 
-client = genai.Client(api_key=GEMINI_API_KEY)
+client = genai.Client(
+    api_key=AI_INTEGRATIONS_GEMINI_API_KEY,
+    http_options={
+        'api_version': '',
+        'base_url': AI_INTEGRATIONS_GEMINI_BASE_URL   
+    }
+)
 
 def is_rate_limit_error(exception: BaseException) -> bool:
     """Check if the exception is a rate limit or quota violation error."""
@@ -22,9 +29,6 @@ def is_rate_limit_error(exception: BaseException) -> bool:
 )
 def get_ai_forecast(data_summary: str) -> str:
     """Generate a sales forecast and insights using Gemini."""
-    if not GEMINI_API_KEY:
-        return "Gemini API key not configured. Please set GEMINI_API_KEY."
-        
     prompt = f"""
     As a professional sales data analyst, provide a comprehensive business intelligence report based on this dataset summary:
     
@@ -48,6 +52,6 @@ def get_ai_forecast(data_summary: str) -> str:
         return response.text or "No insights generated."
     except Exception as e:
         error_msg = str(e)
-        if "429" in error_msg or "RESOURCE_EXHAUSTED" in error_msg:
-            return "Gemini API Quota Exceeded: Your API key has reached its usage limit. Please check your Google AI Studio billing/plan or wait for the quota to reset."
+        if "FREE_CLOUD_BUDGET_EXCEEDED" in error_msg:
+             return "Free cloud budget for AI integrations exceeded. Please upgrade your plan."
         return f"Error generating insights: {error_msg}"

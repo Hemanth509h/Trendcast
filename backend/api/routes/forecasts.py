@@ -7,7 +7,8 @@ from pydantic import BaseModel
 from sklearn.preprocessing import PolynomialFeatures
 from sklearn.linear_model import Ridge
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
-from api.ai_service import get_ai_forecast, client as gemini_client
+from backend.api.ai_service import get_ai_forecast, client as gemini_client
+from google import genai
 from google.genai import types
 
 router = APIRouter()
@@ -18,7 +19,7 @@ class ForecastRequest(BaseModel):
     column: str = "Weekly_Sales"
     horizon: int = 30
     model: str = "timeseries"
-    group_by: str | None = None  # Use Union type for compatibility
+    group_by: str | None = None
 
 class ChatRequest(BaseModel):
     message: str
@@ -27,16 +28,19 @@ class ChatRequest(BaseModel):
 @router.post("/chat")
 async def chat_with_ai(req: ChatRequest):
     try:
-        response = gemini_client.models.generate_content(
+        # Re-initialize client if necessary or use imported one
+        # Note: blueprint instructions say to use the SDK client from example
+        from backend.api.ai_service import client
+        response = client.models.generate_content(
             model="gemini-2.0-flash",
             contents=req.message,
-            config=types.GenerateContentConfig(max_output_tokens=2048)
+            config=types.GenerateContentConfig(max_output_tokens=8192)
         )
         return {"response": response.text}
     except Exception as e:
         error_msg = str(e)
-        if "429" in error_msg or "RESOURCE_EXHAUSTED" in error_msg:
-             raise HTTPException(status_code=429, detail="Gemini API Quota Exceeded. Please check your API key limits.")
+        if "FREE_CLOUD_BUDGET_EXCEEDED" in error_msg:
+             raise HTTPException(status_code=429, detail="Free cloud budget for AI integrations exceeded.")
         raise HTTPException(status_code=500, detail=error_msg)
 
 @router.get("/ai-insights")
