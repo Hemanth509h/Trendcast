@@ -51,12 +51,17 @@ async def generate_forecast(req: ForecastRequest):
             all_groups = df[group_by].unique()
             group_forecasts = {}
             
+            # Find the global min and max dates for the entire dataset to align series
+            global_min_date = df['Date'].min()
+            global_max_date = df['Date'].max()
+            global_dates = pd.date_range(start=global_min_date, end=global_max_date, freq='D')
+            
             for group_val in all_groups:
                 group_df = df[df[group_by] == group_val]
                 if len(group_df) < 5: continue
                 
-                group_daily = group_df.groupby('Date')[column].sum().reset_index()
-                group_daily = group_daily.sort_values('Date').reset_index(drop=True)
+                group_daily = group_df.groupby('Date')[column].sum().reindex(global_dates, fill_value=0).reset_index()
+                group_daily.columns = ['Date', column]
                 
                 # Simplified linear trend for groups
                 g_values = group_daily[column].values
@@ -73,12 +78,7 @@ async def generate_forecast(req: ForecastRequest):
                     "dates": group_daily['Date'].dt.strftime('%Y-%m-%d').tolist()
                 }
             
-            # Combine all group dates to find the absolute max for forecast labels
-            all_max_dates = [df[df[group_by] == g]['Date'].max() for g in all_groups if len(df[df[group_by] == g]) >= 5]
-            if not all_max_dates:
-                 max_hist_date = df['Date'].max()
-            else:
-                 max_hist_date = max(all_max_dates)
+            max_hist_date = global_max_date
 
             return {
                 "is_grouped": True,

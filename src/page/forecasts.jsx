@@ -343,6 +343,7 @@ export default function Forecasts() {
           fill: false,
           tension: 0.4,
           pointRadius: 3,
+          spanGaps: true, // Handle missing data points
         };
       });
     }
