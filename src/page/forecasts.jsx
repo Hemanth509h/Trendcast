@@ -57,6 +57,7 @@ export default function Forecasts() {
   const [isAllColumnsMode, setIsAllColumnsMode] = React.useState(false);
   const [isSelectionModalOpen, setIsSelectionModalOpen] = React.useState(false);
   const [selectedColumnsToForecast, setSelectedColumnsToForecast] = React.useState([]);
+  const [zoomMode, setZoomMode] = React.useState("x"); // "x" or "xy"
 
   // ========== ALL REF HOOKS ==========
   const chartRef = React.useRef(null);
@@ -732,10 +733,9 @@ export default function Forecasts() {
                 <Line
                   ref={chartRef}
                   data={{
-                    labels: [
-                      ...(forecastData.historical?.dates || []),
-                      ...(forecastData.dates || []),
-                    ],
+                    labels: forecastData.is_grouped 
+                      ? [...(Object.values(forecastData.groups)[0]?.dates || []), ...(forecastData.dates || [])]
+                      : [...(forecastData.historical?.dates || []), ...(forecastData.dates || [])],
                     datasets: getDatasets(),
                   }}
                   options={{

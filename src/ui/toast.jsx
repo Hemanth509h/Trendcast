@@ -5,8 +5,8 @@ let setToastState = null;
 let toastQueue = [];
 
 export function toast(message, type = "info") {
-  if (!setToastState) {
-    // Queue the toast if container isn't mounted yet
+  if (typeof setToastState !== 'function') {
+    // Queue the toast if container isn't mounted yet or state is invalid
     toastQueue.push({ message, type });
     
     // Try again in the next tick
