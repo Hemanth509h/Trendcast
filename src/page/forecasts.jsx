@@ -325,13 +325,26 @@ export default function Forecasts() {
     
     if (forecastData.is_grouped) {
       const colors = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4', '#f97316'];
-      return Object.entries(forecastData.groups).map(([group, data], idx) => ({
-        label: group,
-        data: chartType === 'pie' ? [data.forecast.reduce((a, b) => a + b, 0)] : [...Array(data.historical.length).fill(null), ...data.forecast],
-        backgroundColor: colors[idx % colors.length],
-        borderColor: colors[idx % colors.length],
-        borderWidth: 1
-      }));
+      return Object.entries(forecastData.groups).map(([group, data], idx) => {
+        const color = colors[idx % colors.length];
+        const historicalValues = data.historical || [];
+        const forecastValues = data.forecast || [];
+        
+        // Combine historical and forecast into one continuous series
+        // Pad with nulls if necessary, but here we assume dates are shared
+        const combinedData = [...historicalValues, ...forecastValues];
+        
+        return {
+          label: group,
+          data: chartType === 'pie' ? [forecastValues.reduce((a, b) => a + b, 0)] : combinedData,
+          backgroundColor: chartType === 'pie' ? color : (chartType === 'bar' ? color : 'transparent'),
+          borderColor: color,
+          borderWidth: chartType === 'bar' ? 1 : 2,
+          fill: false,
+          tension: 0.4,
+          pointRadius: 3,
+        };
+      });
     }
 
     if (!forecastData.isAll) {
@@ -734,7 +747,13 @@ export default function Forecasts() {
                   ref={chartRef}
                   data={{
                     labels: forecastData.is_grouped 
-                      ? [...(Object.values(forecastData.groups)[0]?.dates || []), ...(forecastData.dates || [])]
+                      ? (() => {
+                          const firstGroup = Object.values(forecastData.groups)[0];
+                          if (!firstGroup) return forecastData.dates || [];
+                          const histDates = firstGroup.dates || [];
+                          const fcstDates = forecastData.dates || [];
+                          return [...histDates, ...fcstDates];
+                        })()
                       : [...(forecastData.historical?.dates || []), ...(forecastData.dates || [])],
                     datasets: getDatasets(),
                   }}
@@ -759,7 +778,13 @@ export default function Forecasts() {
                 <Bar
                   data={{
                     labels: forecastData.is_grouped 
-                      ? [...(Object.values(forecastData.groups)[0]?.dates || []), ...(forecastData.dates || [])]
+                      ? (() => {
+                          const firstGroup = Object.values(forecastData.groups)[0];
+                          if (!firstGroup) return forecastData.dates || [];
+                          const histDates = firstGroup.dates || [];
+                          const fcstDates = forecastData.dates || [];
+                          return [...histDates, ...fcstDates];
+                        })()
                       : [...(forecastData.historical?.dates || []), ...(forecastData.dates || [])],
                     datasets: getDatasets(),
                   }}

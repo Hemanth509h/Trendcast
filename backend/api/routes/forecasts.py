@@ -73,11 +73,18 @@ async def generate_forecast(req: ForecastRequest):
                     "dates": group_daily['Date'].dt.strftime('%Y-%m-%d').tolist()
                 }
             
+            # Combine all group dates to find the absolute max for forecast labels
+            all_max_dates = [df[df[group_by] == g]['Date'].max() for g in all_groups if len(df[df[group_by] == g]) >= 5]
+            if not all_max_dates:
+                 max_hist_date = df['Date'].max()
+            else:
+                 max_hist_date = max(all_max_dates)
+
             return {
                 "is_grouped": True,
                 "group_by": group_by,
                 "groups": group_forecasts,
-                "dates": [ (df['Date'].max() + pd.Timedelta(days=i)).strftime('%Y-%m-%d') for i in range(1, horizon + 1)]
+                "dates": [ (max_hist_date + pd.Timedelta(days=i)).strftime('%Y-%m-%d') for i in range(1, horizon + 1)]
             }
 
         daily_data = df.groupby('Date')[column].sum().reset_index()
