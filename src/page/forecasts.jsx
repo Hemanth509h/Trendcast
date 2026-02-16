@@ -57,6 +57,49 @@ export default function Forecasts() {
   const [isAllColumnsMode, setIsAllColumnsMode] = React.useState(false);
   const [isSelectionModalOpen, setIsSelectionModalOpen] = React.useState(false);
   const [selectedColumnsToForecast, setSelectedColumnsToForecast] = React.useState([]);
+  const [chatMessages, setChatMessages] = React.useState([]);
+  const [chatInput, setChatInput] = React.useState("");
+  const [isChatLoading, setIsChatLoading] = React.useState(false);
+  const [aiInsights, setAiInsights] = React.useState("");
+
+  const handleSendMessage = async () => {
+    if (!chatInput.trim()) return;
+    const userMsg = { role: "user", content: chatInput };
+    setChatMessages(prev => [...prev, userMsg]);
+    setChatInput("");
+    setIsChatLoading(true);
+    try {
+      const response = await fetch(getApiUrl("/api/chat"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: chatInput, context: chatMessages }),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.detail || "Failed to get AI response");
+      setChatMessages(prev => [...prev, { role: "assistant", content: result.response }]);
+    } catch (error) {
+      toast(error.message, "error");
+    } finally {
+      setIsChatLoading(false);
+    }
+  };
+
+  const fetchAiInsights = async () => {
+    try {
+      const response = await fetch(getApiUrl("/api/ai-insights"));
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.detail || "Failed to fetch AI insights");
+      setAiInsights(result.insights_text);
+    } catch (error) {
+      console.error("AI Insights Error:", error);
+    }
+  };
+
+  useEffect(() => {
+    if (forecastData && !forecastData.isAll) {
+      fetchAiInsights();
+    }
+  }, [forecastData]);
 
   // ========== ALL REF HOOKS ==========
   const chartRef = React.useRef(null);
@@ -812,6 +855,43 @@ export default function Forecasts() {
                   ))}
                 </tbody>
               </table>
+            </div>
+
+            {aiInsights && (
+              <div className="ai-insights-section" style={{ marginTop: '40px', padding: '20px', backgroundColor: '#f9fafb', borderRadius: '12px', border: '1px solid #e5e7eb' }}>
+                <h2 style={{ display: 'flex', alignItems: 'center', gap: '10px', color: '#111827' }}>
+                  <span style={{ fontSize: '1.5rem' }}>🤖</span> AI Business Insights
+                </h2>
+                <div style={{ whiteSpace: 'pre-wrap', color: '#374151', lineHeight: '1.6', fontSize: '0.95rem' }}>
+                  {aiInsights}
+                </div>
+              </div>
+            )}
+
+            <div className="ai-chat-section" style={{ marginTop: '40px', padding: '20px', backgroundColor: 'white', borderRadius: '12px', border: '1px solid #e5e7eb', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }}>
+              <h2 style={{ color: '#111827', marginBottom: '20px' }}>Chat with AI Assistant</h2>
+              <div className="chat-messages" style={{ height: '300px', overflowY: 'auto', marginBottom: '20px', padding: '15px', border: '1px solid #f3f4f6', borderRadius: '8px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                {chatMessages.length === 0 && <p style={{ color: '#9ca3af', textAlign: 'center', marginTop: '100px' }}>Ask questions about your forecast data...</p>}
+                {chatMessages.map((msg, i) => (
+                  <div key={i} style={{ alignSelf: msg.role === 'user' ? 'flex-end' : 'flex-start', backgroundColor: msg.role === 'user' ? '#4f46e5' : '#f3f4f6', color: msg.role === 'user' ? 'white' : '#111827', padding: '10px 15px', borderRadius: '12px', maxWidth: '80%', wordBreak: 'break-word' }}>
+                    {msg.content}
+                  </div>
+                ))}
+                {isChatLoading && <div style={{ alignSelf: 'flex-start', backgroundColor: '#f3f4f6', padding: '10px 15px', borderRadius: '12px' }}>AI is thinking...</div>}
+              </div>
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <input 
+                  type="text" 
+                  value={chatInput} 
+                  onChange={(e) => setChatInput(e.target.value)} 
+                  onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
+                  placeholder="Ask a follow-up question..." 
+                  style={{ flex: 1, padding: '12px', borderRadius: '8px', border: '1px solid #d1d5db' }}
+                />
+                <button onClick={handleSendMessage} disabled={isChatLoading} style={{ padding: '10px 20px', backgroundColor: '#4f46e5', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>
+                  Send
+                </button>
+              </div>
             </div>
           </div>
         </div>
