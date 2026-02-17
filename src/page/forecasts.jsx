@@ -36,8 +36,6 @@ ChartJS.register(
 );
 
 export default function Forecasts() {
-  // ========== ALL STATE HOOKS AT TOP ==========
-  // Initialize from sessionStorage or empty array
   const [salesdata, setsalesdata] = React.useState(() => {
     const stored = sessionStorage.getItem("salesdata");
     return stored ? JSON.parse(stored) : [];
@@ -47,8 +45,8 @@ export default function Forecasts() {
   const [selectedColumn, setSelectedColumn] = React.useState("");
   const [selectedHorizon, setSelectedHorizon] = React.useState("12");
   const [selectmodel, setselectmodel] = React.useState("timeseries");
-  const [groupBy, setGroupBy] = React.useState(""); // New
-  const [chartType, setChartType] = React.useState("line"); // New
+  const [groupBy, setGroupBy] = React.useState("");
+  const [chartType, setChartType] = React.useState("line");
   const [forecastData, setForecastData] = React.useState(null);
   const [metrics, setMetrics] = React.useState(null);
   const [isLoading, setIsLoading] = React.useState(false);
@@ -57,14 +55,11 @@ export default function Forecasts() {
   const [isAllColumnsMode, setIsAllColumnsMode] = React.useState(false);
   const [isSelectionModalOpen, setIsSelectionModalOpen] = React.useState(false);
   const [selectedColumnsToForecast, setSelectedColumnsToForecast] = React.useState([]);
-  const [zoomMode, setZoomMode] = React.useState("x"); // "x" or "xy"
+  const [zoomMode, setZoomMode] = React.useState("x");
 
-  // ========== ALL REF HOOKS ==========
   const chartRef = React.useRef(null);
 
-  // ========== ALL EFFECT HOOKS ==========
   useEffect(() => {
-    // Only fetch if sessionStorage is empty
     if (salesdata.length === 0 && !sessionStorage.getItem("salesdata")) {
       fetchdata();
     }
@@ -79,52 +74,23 @@ export default function Forecasts() {
     }
   }, [salesdata]);
 
-  // ========== MEMOIZED VALUES ==========
   const xScaleConfig = useMemo(() => {
     const config = {
-      title: {
-        display: true,
-        text: "Date",
-        font: {
-          size: 14,
-          weight: "bold",
-        },
-      },
-      ticks: {
-        font: {
-          size: 11,
-        },
-        maxRotation: 45,
-        minRotation: 0,
-      },
-      grid: {
-        color: "rgba(200, 200, 200, 0.1)",
-      },
+      title: { display: true, text: "Date", font: { size: 14, weight: "bold" } },
+      ticks: { font: { size: 11 }, maxRotation: 45, minRotation: 0 },
+      grid: { color: "rgba(200, 200, 200, 0.1)" },
     };
-
-    // Only add min/max if they have actual numeric values (not null)
-    if (zoomRange.min !== null && typeof zoomRange.min === "number") {
-      config.min = zoomRange.min;
-    }
-    if (zoomRange.max !== null && typeof zoomRange.max === "number") {
-      config.max = zoomRange.max;
-    }
-
+    if (zoomRange.min !== null && typeof zoomRange.min === "number") config.min = zoomRange.min;
+    if (zoomRange.max !== null && typeof zoomRange.max === "number") config.max = zoomRange.max;
     return config;
   }, [zoomRange.min, zoomRange.max]);
 
-  // ========== FUNCTION DEFINITIONS ==========
   const fetchdata = async () => {
     try {
-      const response = await fetch(getApiUrl("/api/salesdata"), {
-        method: "GET",
-      });
+      const response = await fetch(getApiUrl("/api/salesdata"), { method: "GET" });
       const result = await response.json();
-      if (!response.ok) {
-        throw new Error(result.error);
-      }
+      if (!response.ok) throw new Error(result.error);
       setsalesdata(result.data);
-      // Store in sessionStorage
       sessionStorage.setItem("salesdata", JSON.stringify(result.data));
     } catch (error) {
       toast(error.message, "error");
@@ -132,29 +98,16 @@ export default function Forecasts() {
   };
 
   const handleGenerateForecast = async () => {
-    if (!selectedColumn) {
-      toast("Please select a column to forecast.", "warning");
+    if (!selectedColumn || !selectedHorizon || !selectmodel) {
+      toast("Please complete all selections.", "warning");
       return;
     }
-
-    if (!selectedHorizon) {
-      toast("Please select forecast horizon.", "warning");
-      return;
-    }
-
-    if (!selectmodel) {
-      toast("Please select a model.", "warning");
-      return;
-    }
-
     setIsLoading(true);
     setIsAllColumnsMode(false);
     try {
       const response = await fetch(getApiUrl("/api/generateforecast"), {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           column: selectedColumn,
           horizon: parseInt(selectedHorizon),
@@ -162,13 +115,8 @@ export default function Forecasts() {
           group_by: groupBy || null,
         }),
       });
-
       const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.error || "Failed to generate forecast");
-      }
-
+      if (!response.ok) throw new Error(result.error || "Failed to generate forecast");
       setForecastData(result);
       setMetrics(result.metrics);
       toast("Forecast generated successfully!", "success");
@@ -179,63 +127,41 @@ export default function Forecasts() {
     }
   };
 
-  const handleAllColumnsForecast = async () => {
+  const handleAllColumnsForecast = () => {
     if (!salesdata || salesdata.length === 0) {
       toast("No data available to forecast.", "warning");
       return;
     }
-
     const numericColumns = Object.keys(salesdata[0]).filter(key => {
       const val = salesdata[0][key];
       return (typeof val === 'number' || (!isNaN(parseFloat(val)) && isFinite(val))) && !['Date', 'Store_ID', 'Department'].includes(key);
     });
-
-    if (numericColumns.length === 0) {
-      toast("No numeric columns found for forecasting.", "error");
-      return;
-    }
-
     setSelectedColumnsToForecast(numericColumns);
     setIsSelectionModalOpen(true);
   };
 
   const executeMultiColumnForecast = async (columnsToProcess) => {
-    if (columnsToProcess.length === 0) {
-      toast("Please select at least one column.", "warning");
-      return;
-    }
-
     setIsLoading(true);
     setIsAllColumnsMode(true);
     setIsSelectionModalOpen(false);
-    
     try {
       const allResults = await Promise.all(columnsToProcess.map(async (col) => {
         const response = await fetch(getApiUrl("/api/generateforecast"), {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            column: col,
-            horizon: parseInt(selectedHorizon),
-            model: selectmodel,
-          }),
+          body: JSON.stringify({ column: col, horizon: parseInt(selectedHorizon), model: selectmodel }),
         });
         const result = await response.json();
         if (!response.ok) throw new Error(result.error || `Failed for ${col}`);
         return { column: col, ...result };
       }));
-
-      // Merge results for "All Columns" view
-      const mergedDates = allResults[0].dates;
-      const mergedHistoricalDates = allResults[0].historical.dates;
-      
       setForecastData({
         isAll: true,
-        dates: mergedDates,
-        historical: { dates: mergedHistoricalDates },
+        dates: allResults[0].dates,
+        historical: { dates: allResults[0].historical.dates },
         results: allResults
       });
-      setMetrics(null); // Metrics don't make sense for combined view
+      setMetrics(null);
       toast("Multi-column forecast generated!", "success");
     } catch (error) {
       toast(error.message, "error");
@@ -246,603 +172,143 @@ export default function Forecasts() {
 
   const zoomToForecast = () => {
     if (!chartRef.current || !forecastData) return;
-
     const chart = chartRef.current;
-
     const historicalLength = forecastData.historical?.dates?.length || 0;
-    const forecastLength = forecastData.dates?.length || 0;
-    const totalLength = historicalLength + forecastLength;
-
-    const minIndex = Math.max(0, historicalLength - 2);
-    const maxIndex = totalLength - 1;
-
-    chart.zoomScale("x", {
-      min: minIndex,
-      max: maxIndex,
-    });
+    const totalLength = historicalLength + (forecastData.dates?.length || 0);
+    chart.zoomScale("x", { min: Math.max(0, historicalLength - 2), max: totalLength - 1 });
   };
 
-  const resetZoom = () => {
-    setZoomRange({ min: null, max: null });
-  };
+  const resetZoom = () => setZoomRange({ min: null, max: null });
 
-  // ========== COMPONENT DEFINITIONS ==========
-  const TooltipIcon = ({ metric, explanation }) => {
-    return (
-      <div style={{ position: "relative", display: "flex", cursor: "help" }}>
-        <div
-          onMouseEnter={() => setHoveredMetric(metric)}
-          onMouseLeave={() => setHoveredMetric(null)}
-        >
-          <Info size={16} style={{ color: "#4f46e5" }} />
-        </div>
-        {hoveredMetric === metric && (
-          <div
-            style={{
-              position: "absolute",
-              bottom: "100%",
-              left: "50%",
-              transform: "translateX(-50%)",
-              backgroundColor: "#1f2937",
-              color: "#fff",
-              padding: "8px 12px",
-              borderRadius: "6px",
-              fontSize: "12px",
-              whiteSpace: "nowrap",
-              zIndex: 1000,
-              marginBottom: "8px",
-              boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
-              border: "1px solid #374151",
-            }}
-          >
-            {explanation}
-            <div
-              style={{
-                position: "absolute",
-                bottom: "-4px",
-                left: "50%",
-                transform: "translateX(-50%)",
-                width: "0",
-                height: "0",
-                borderLeft: "4px solid transparent",
-                borderRight: "4px solid transparent",
-                borderTop: "4px solid #1f2937",
-              }}
-            />
-          </div>
-        )}
+  const TooltipIcon = ({ metric, explanation }) => (
+    <div style={{ position: "relative", display: "flex", cursor: "help" }}>
+      <div onMouseEnter={() => setHoveredMetric(metric)} onMouseLeave={() => setHoveredMetric(null)}>
+        <Info size={16} style={{ color: "#4f46e5" }} />
       </div>
-    );
-  };
-
-  const numberlist = [
-    1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30,
-    32, 34, 36, 38, 40, 42, 44, 46, 48, 50,
-  ];
+      {hoveredMetric === metric && (
+        <div style={{ position: "absolute", bottom: "100%", left: "50%", transform: "translateX(-50%)", backgroundColor: "#1f2937", color: "#fff", padding: "8px 12px", borderRadius: "6px", fontSize: "12px", whiteSpace: "nowrap", zIndex: 1000, marginBottom: "8px", boxShadow: "0 4px 12px rgba(0,0,0,0.15)", border: "1px solid #374151" }}>
+          {explanation}
+          <div style={{ position: "absolute", bottom: "-4px", left: "50%", transform: "translateX(-50%)", width: "0", height: "0", borderLeft: "4px solid transparent", borderRight: "4px solid transparent", borderTop: "4px solid #1f2937" }} />
+        </div>
+      )}
+    </div>
+  );
 
   const getDatasets = () => {
     if (!forecastData) return [];
+    const colors = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4', '#f97316'];
     
     if (forecastData.is_grouped) {
-      const colors = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4', '#f97316'];
-      return Object.entries(forecastData.groups).map(([group, data], idx) => {
-        const color = colors[idx % colors.length];
-        const historicalValues = data.historical || [];
-        const forecastValues = data.forecast || [];
-        
-        // Ensure data points align with the labels (dates)
-        // The backend returns group_daily[column].tolist() which is daily frequency
-        const combinedData = [...historicalValues, ...forecastValues];
-        
-        return {
-          label: group,
-          data: combinedData,
-          backgroundColor: chartType === 'bar' ? color : 'transparent',
-          borderColor: color,
-          borderWidth: 2,
-          fill: false,
-          tension: 0.4,
-          pointRadius: 3,
-          spanGaps: true,
-        };
-      });
+      return Object.entries(forecastData.groups).map(([group, data], idx) => ({
+        label: group,
+        data: [...(data.historical || []), ...(data.forecast || [])],
+        backgroundColor: chartType === 'bar' ? colors[idx % colors.length] : 'transparent',
+        borderColor: colors[idx % colors.length],
+        borderWidth: 2,
+        fill: false,
+        tension: 0.4,
+        pointRadius: 3,
+        spanGaps: true,
+      }));
     }
 
     if (!forecastData.isAll) {
       return [
-        {
-          label: "Historical Data",
-          data: forecastData.historical?.values || [],
-          borderColor: "#3b82f6",
-          backgroundColor: "rgba(59, 130, 246, 0.1)",
-          fill: true,
-          tension: 0.4,
-          borderWidth: 2,
-          pointRadius: 4,
-          pointHoverRadius: 6,
-        },
-        {
-          label: "Trend",
-          data: [
-            ...(forecastData.historical?.trend || []),
-            ...Array((forecastData.dates || []).length).fill(null),
-          ],
-          borderColor: "#f59e0b",
-          backgroundColor: "transparent",
-          borderDash: [2, 2],
-          fill: false,
-          tension: 0.4,
-          borderWidth: 2,
-          pointRadius: 4,
-          pointHoverRadius: 6,
-        },
-        {
-          label: "Forecast",
-          data: [
-            ...Array(
-              (forecastData.historical?.values?.length || 1) - 1,
-            ).fill(null),
-            forecastData.historical?.values?.[
-              forecastData.historical.values.length - 1
-            ],
-            ...(forecastData.forecast || []),
-          ],
-          borderColor: "#10b981",
-          backgroundColor: "rgba(16, 185, 129, 0.1)",
-          borderDash: [5, 5],
-          fill: true,
-          tension: 0.4,
-          borderWidth: 2,
-          pointRadius: 4,
-          pointHoverRadius: 6,
-        },
+        { label: "Historical", data: forecastData.historical?.values || [], borderColor: "#3b82f6", backgroundColor: "rgba(59, 130, 246, 0.1)", fill: true, tension: 0.4, borderWidth: 2, pointRadius: 4 },
+        { label: "Trend", data: [...(forecastData.historical?.trend || []), ...Array((forecastData.dates || []).length).fill(null)], borderColor: "#f59e0b", borderDash: [2, 2], fill: false, tension: 0.4, borderWidth: 2, pointRadius: 4 },
+        { label: "Forecast", data: [...Array((forecastData.historical?.values?.length || 1) - 1).fill(null), forecastData.historical?.values?.[(forecastData.historical?.values?.length || 1) - 1], ...(forecastData.forecast || [])], borderColor: "#10b981", backgroundColor: "rgba(16, 185, 129, 0.1)", borderDash: [5, 5], fill: true, tension: 0.4, borderWidth: 2, pointRadius: 4 }
       ];
     }
 
-    const colors = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
     return forecastData.results.flatMap((res, idx) => {
       const color = colors[idx % colors.length];
       return [
-        {
-          label: `${res.column} (Hist)`,
-          data: res.historical.values,
-          borderColor: color,
-          backgroundColor: 'transparent',
-          fill: false,
-          tension: 0.4,
-          borderWidth: 1,
-          pointRadius: 2,
-          pointHoverRadius: 6,
-          pointBackgroundColor: color,
-          showLine: true,
-        },
-        {
-          label: `${res.column} (Fcst)`,
-          data: [
-            ...Array(res.historical.values.length - 1).fill(null),
-            res.historical.values[res.historical.values.length - 1],
-            ...res.forecast
-          ],
-          borderColor: color,
-          borderDash: [5, 5],
-          backgroundColor: 'transparent',
-          fill: false,
-          tension: 0.4,
-          borderWidth: 2,
-          pointRadius: 4,
-          pointHoverRadius: 6,
-        }
+        { label: `${res.column} (Hist)`, data: res.historical.values, borderColor: color, fill: false, tension: 0.4, borderWidth: 1, pointRadius: 2 },
+        { label: `${res.column} (Fcst)`, data: [...Array(res.historical.values.length - 1).fill(null), res.historical.values[res.historical.values.length - 1], ...res.forecast], borderColor: color, borderDash: [5, 5], fill: false, tension: 0.4, borderWidth: 2, pointRadius: 4 }
       ];
     });
   };
-
-  // ========== RENDER ==========
 
   return (
     <div className="forecasts-container">
       <div className="forecast-header">
         <h1>Sales Revenue Forecast</h1>
         <p>Advanced machine learning predictions for your sales pipeline</p>
-        {importedfilename && (
-          <p className="imported-info" style={{ fontSize: '0.9rem', color: '#666', marginTop: '5px' }}>
-            Data source: {importedfilename} ({importedfilerecord} records)
-          </p>
-        )}
+        {importedfilename && <p className="imported-info">Data source: {importedfilename} ({importedfilerecord} records)</p>}
       </div>
       <div className="forecasts-buttons">
-        <label>
-          Select Column for Forecasting:
-          <select
-            className="select-column"
-            value={selectedColumn}
-            onChange={(e) => setSelectedColumn(e.target.value)}
-          >
+        <label>Column:
+          <select className="select-column" value={selectedColumn} onChange={(e) => setSelectedColumn(e.target.value)}>
             <option value="">Select column</option>
-
-            {salesdata && salesdata.length > 0 ? (
-              Object.keys(salesdata[0]).map((key) => (
-                <option key={key} value={key}>
-                  {key}
-                </option>
-              ))
-            ) : (
-              <option value="">No data available</option>
-            )}
+            {salesdata?.length > 0 && Object.keys(salesdata[0]).map(key => <option key={key} value={key}>{key}</option>)}
           </select>
         </label>
-
-        <label>
-          Select Forecast Horizon (months):
-          <select
-            className="select-column"
-            value={selectedHorizon}
-            onChange={(e) => setSelectedHorizon(e.target.value)}
-          >
-            <option value="">Select horizon</option>
-            {numberlist.map((num) => (
-              <option key={num} value={num}>
-                {num}
-              </option>
-            ))}
+        <label>Horizon (months):
+          <select className="select-column" value={selectedHorizon} onChange={(e) => setSelectedHorizon(e.target.value)}>
+            {[1, 2, 3, 4, 6, 12, 24].map(num => <option key={num} value={num}>{num}</option>)}
           </select>
         </label>
-
-        <label>
-          Select Model:
-          <select
-            className="select-column"
-            value={selectmodel}
-            onChange={(e) => setselectmodel(e.target.value)}
-          >
-            <option value="">Select model</option>
-            <option value="timeseries">
-              Time Series Model (Historical Analysis)
-            </option>
+        <label>Model:
+          <select className="select-column" value={selectmodel} onChange={(e) => setselectmodel(e.target.value)}>
+            <option value="timeseries">Time Series Model</option>
           </select>
         </label>
-
-        <label>
-          Group By:
+        <label>Group By:
           <select className="select-column" value={groupBy} onChange={(e) => setGroupBy(e.target.value)}>
             <option value="">No Grouping</option>
             <option value="Region">Region</option>
             <option value="Product_Category">Product Category</option>
           </select>
         </label>
-
-        <label>
-          Chart Type:
+        <label>Chart:
           <select className="select-column" value={chartType} onChange={(e) => setChartType(e.target.value)}>
             <option value="line">Line Chart</option>
             <option value="bar">Bar Chart</option>
           </select>
         </label>
-
-        <button
-          className="btn btn-generate"
-          onClick={handleGenerateForecast}
-          disabled={isLoading}
-        >
-          {isLoading && !isAllColumnsMode ? "Generating..." : "Generate Forecast"}
+        <button className="btn btn-generate" onClick={handleGenerateForecast} disabled={isLoading}>
+          {isLoading ? "Generating..." : "Generate Forecast"}
         </button>
-
-        <button
-          className="btn btn-all-columns"
-          onClick={handleAllColumnsForecast}
-          disabled={isLoading}
-          style={{
-            padding: "10px 20px",
-            backgroundColor: "#8b5cf6",
-            color: "white",
-            border: "none",
-            borderRadius: "6px",
-            cursor: "pointer",
-            fontWeight: "600",
-            transition: "all 0.3s ease",
-            boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
-          }}
-        >
-          {isLoading && isAllColumnsMode ? "Generating..." : "Forecast Selection"}
+        <button className="btn btn-all-columns" onClick={handleAllColumnsForecast} disabled={isLoading}>
+          Forecast Selection
         </button>
       </div>
 
-      <Dialog
-        isopen={isSelectionModalOpen}
-        isclose={() => setIsSelectionModalOpen(false)}
-        title="Select Columns to Forecast"
-      >
+      <Dialog isopen={isSelectionModalOpen} isclose={() => setIsSelectionModalOpen(false)} title="Select Columns">
         <div style={{ padding: "10px" }}>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", marginBottom: "20px" }}>
-            {salesdata && salesdata.length > 0 && Object.keys(salesdata[0]).filter(key => {
-              const val = salesdata[0][key];
-              return typeof val === 'number' || (!isNaN(parseFloat(val)) && isFinite(val));
-            }).map(col => (
-              <label key={col} style={{ display: "flex", alignItems: "center", gap: "8px", cursor: "pointer" }}>
-                <input
-                  type="checkbox"
-                  checked={selectedColumnsToForecast.includes(col)}
-                  onChange={(e) => {
-                    if (e.target.checked) {
-                      setSelectedColumnsToForecast([...selectedColumnsToForecast, col]);
-                    } else {
-                      setSelectedColumnsToForecast(selectedColumnsToForecast.filter(c => c !== col));
-                    }
-                  }}
-                />
+            {salesdata?.length > 0 && Object.keys(salesdata[0]).filter(key => typeof salesdata[0][key] === 'number').map(col => (
+              <label key={col} style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <input type="checkbox" checked={selectedColumnsToForecast.includes(col)} onChange={(e) => e.target.checked ? setSelectedColumnsToForecast([...selectedColumnsToForecast, col]) : setSelectedColumnsToForecast(selectedColumnsToForecast.filter(c => c !== col))} />
                 {col}
               </label>
             ))}
           </div>
           <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px" }}>
-            <button
-              className="btn btn-cancel"
-              onClick={() => setIsSelectionModalOpen(false)}
-              style={{ backgroundColor: "#ef4444", color: "white", padding: "8px 16px", borderRadius: "4px", border: "none", cursor: "pointer" }}
-            >
-              Cancel
-            </button>
-            <button
-              className="btn btn-generate"
-              onClick={() => executeMultiColumnForecast(selectedColumnsToForecast)}
-              style={{ backgroundColor: "#8b5cf6", color: "white", padding: "8px 16px", borderRadius: "4px", border: "none", cursor: "pointer" }}
-            >
-              Start Forecast
-            </button>
+            <button onClick={() => setIsSelectionModalOpen(false)}>Cancel</button>
+            <button onClick={() => executeMultiColumnForecast(selectedColumnsToForecast)}>Start</button>
           </div>
         </div>
       </Dialog>
 
-      {((metrics && forecastData) || (forecastData && forecastData.isAll)) && (
-        <div>
-          {!forecastData.isAll && metrics && (
+      {forecastData && (
+        <div className="forecast-results">
+          {metrics && !forecastData.is_grouped && (
             <div className="metrics-grid">
-              <div className="metric-card primary">
-                <div className="metric-icon">📊</div>
-                <div className="metric-content">
-                  <div
-                    style={{ display: "flex", alignItems: "center", gap: "6px" }}
-                  >
-                    <span className="metric-label">Target Column</span>
-                    <TooltipIcon
-                      metric="column"
-                      explanation="The data column selected for forecasting"
-                    />
-                  </div>
-                  <span className="metric-value">{selectedColumn}</span>
-                </div>
-              </div>
-              <div className="metric-card success">
-                <div className="metric-icon">📈</div>
-                <div className="metric-content">
-                  <div
-                    style={{ display: "flex", alignItems: "center", gap: "6px" }}
-                  >
-                    <span className="metric-label">R² Score</span>
-                    <TooltipIcon
-                      metric="r2"
-                      explanation="Coefficient of determination (0-100%). Higher is better."
-                    />
-                  </div>
-                  <span className="metric-value">
-                    {(metrics.r2 * 100).toFixed(2)}%
-                  </span>
-                </div>
-              </div>
-              <div className="metric-card warning">
-                <div className="metric-icon">📉</div>
-                <div className="metric-content">
-                  <div
-                    style={{ display: "flex", alignItems: "center", gap: "6px" }}
-                  >
-                    <span className="metric-label">MAE</span>
-                    <TooltipIcon
-                      metric="mae"
-                      explanation="Mean Absolute Error. Lower is better."
-                    />
-                  </div>
-                  <span className="metric-value">
-                    ${metrics.mae?.toFixed(2) || "N/A"}
-                  </span>
-                </div>
-              </div>
-              <div className="metric-card info">
-                <div className="metric-icon">📊</div>
-                <div className="metric-content">
-                  <div
-                    style={{ display: "flex", alignItems: "center", gap: "6px" }}
-                  >
-                    <span className="metric-label">RMSE</span>
-                    <TooltipIcon
-                      metric="rmse"
-                      explanation="Root Mean Square Error. Lower is better."
-                    />
-                  </div>
-                  <span className="metric-value">
-                    ${metrics.rmse?.toFixed(2) || "N/A"}
-                  </span>
-                </div>
-              </div>
+              <div className="metric-card success"><span className="metric-label">R² Score</span><span className="metric-value">{(metrics.r2 * 100).toFixed(2)}%</span></div>
+              <div className="metric-card warning"><span className="metric-label">MAE</span><span className="metric-value">${metrics.mae?.toFixed(2)}</span></div>
             </div>
           )}
-
-          <div className="forecast-results">
-            <h2>Forecast Chart ({chartType.charAt(0).toUpperCase() + chartType.slice(1)})</h2>
-
-            <div style={{ marginBottom: "15px", display: "flex", gap: "10px" }}>
-              <button
-                onClick={zoomToForecast}
-                style={{
-                  padding: "8px 16px",
-                  backgroundColor: "#10b981",
-                  color: "white",
-                  border: "none",
-                  borderRadius: "6px",
-                  cursor: "pointer",
-                  fontWeight: "600",
-                  fontSize: "14px",
-                  transition: "all 0.3s ease",
-                  boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
-                }}
-                onMouseEnter={(e) => {
-                  e.target.style.backgroundColor = "#059669";
-                  e.target.style.transform = "translateY(-2px)";
-                  e.target.style.boxShadow = "0 4px 8px rgba(0,0,0,0.15)";
-                }}
-                onMouseLeave={(e) => {
-                  e.target.style.backgroundColor = "#10b981";
-                  e.target.style.transform = "translateY(0)";
-                  e.target.style.boxShadow = "0 2px 4px rgba(0,0,0,0.1)";
-                }}
-              >
-                🔍 Zoom to Forecast
-              </button>
-              <button
-                onClick={resetZoom}
-                style={{
-                  padding: "8px 16px",
-                  backgroundColor: "#6366f1",
-                  color: "white",
-                  border: "none",
-                  borderRadius: "6px",
-                  cursor: "pointer",
-                  fontWeight: "600",
-                  fontSize: "14px",
-                  transition: "all 0.3s ease",
-                  boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
-                }}
-                onMouseEnter={(e) => {
-                  e.target.style.backgroundColor = "#4f46e5";
-                  e.target.style.transform = "translateY(-2px)";
-                  e.target.style.boxShadow = "0 4px 8px rgba(0,0,0,0.15)";
-                }}
-                onMouseLeave={(e) => {
-                  e.target.style.backgroundColor = "#6366f1";
-                  e.target.style.transform = "translateY(0)";
-                  e.target.style.boxShadow = "0 2px 4px rgba(0,0,0,0.1)";
-                }}
-              >
-                ↺ Reset Zoom
-              </button>
-              <button
-                onClick={() => setZoomMode(zoomMode === "x" ? "xy" : "x")}
-                style={{
-                  padding: "8px 16px",
-                  backgroundColor: zoomMode === "xy" ? "#f59e0b" : "#94a3b8",
-                  color: "white",
-                  border: "none",
-                  borderRadius: "6px",
-                  cursor: "pointer",
-                  fontWeight: "600",
-                  fontSize: "14px",
-                  transition: "all 0.3s ease",
-                  boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
-                }}
-              >
-                {zoomMode === "xy" ? "🔒 Unlock Y-Axis Zoom" : "🔓 Lock Y-Axis Zoom"}
-              </button>
-            </div>
-
-            <div className="chart-container" style={{ position: 'relative', height: '600px', width: '100%', background: 'white', padding: '20px', borderRadius: '10px', boxShadow: '0 4px 6px rgba(0,0,0,0.05)' }}>
-              {chartType === 'line' && (
-                <Line
-                  ref={chartRef}
-                  data={{
-                    labels: forecastData.is_grouped 
-                      ? (() => {
-                          const firstGroup = Object.values(forecastData.groups)[0];
-                          if (!firstGroup) return forecastData.dates || [];
-                          const histDates = firstGroup.dates || [];
-                          const fcstDates = forecastData.dates || [];
-                          return [...histDates, ...fcstDates];
-                        })()
-                      : [...(forecastData.historical?.dates || []), ...(forecastData.dates || [])],
-                    datasets: getDatasets(),
-                  }}
-                  options={{
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                      legend: { position: "top" },
-                      zoom: {
-                        zoom: { wheel: { enabled: true }, pinch: { enabled: true }, mode: zoomMode },
-                        pan: { enabled: true, mode: zoomMode },
-                      },
-                    },
-                    scales: {
-                      x: xScaleConfig,
-                      y: { beginAtZero: false, title: { display: true, text: "Value" } },
-                    },
-                  }}
-                />
-              )}
-              {chartType === 'bar' && (
-                <Bar
-                  data={{
-                    labels: forecastData.is_grouped 
-                      ? (() => {
-                          const firstGroup = Object.values(forecastData.groups)[0];
-                          if (!firstGroup) return forecastData.dates || [];
-                          const histDates = firstGroup.dates || [];
-                          const fcstDates = forecastData.dates || [];
-                          return [...histDates, ...fcstDates];
-                        })()
-                      : [...(forecastData.historical?.dates || []), ...(forecastData.dates || [])],
-                    datasets: getDatasets(),
-                  }}
-                  options={{ responsive: true, maintainAspectRatio: false }}
-                />
-              )}
-              {chartType === 'pie' && forecastData.is_grouped && (
-                <Pie
-                  data={{
-                    labels: Object.keys(forecastData.groups),
-                    datasets: getDatasets(),
-                  }}
-                  options={{ responsive: true, maintainAspectRatio: false }}
-                />
-              )}
-            </div>
-
-            <h2>Forecast Results Table</h2>
-            <div className="forecast-table-container">
-              <table className="forecast-table">
-                <thead>
-                  <tr>
-                    <th>Date</th>
-                    <th>Forecast Value</th>
-                    <th>Lower Bound (95% CI)</th>
-                    <th>Upper Bound (95% CI)</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {forecastData?.dates?.map((date, index) => (
-                    <tr key={index}>
-                      <td>{date}</td>
-                      <td>
-                        ${forecastData?.forecast?.[index]?.toFixed(2) || "N/A"}
-                      </td>
-                      <td>
-                        $
-                        {forecastData?.confidence_bounds?.lower?.[
-                          index
-                        ]?.toFixed(2) || "N/A"}
-                      </td>
-                      <td>
-                        $
-                        {forecastData?.confidence_bounds?.upper?.[
-                          index
-                        ]?.toFixed(2) || "N/A"}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+          <h2>Forecast Chart</h2>
+          <div className="chart-container" style={{ position: "relative", height: "500px", width: "100%" }}>
+            {chartType === 'line' ? <Line ref={chartRef} data={{ labels: [...(forecastData.historical?.dates || []), ...(forecastData.dates || [])], datasets: getDatasets() }} options={{ responsive: true, maintainAspectRatio: false, scales: { x: xScaleConfig } }} /> : <Bar data={{ labels: [...(forecastData.historical?.dates || []), ...(forecastData.dates || [])], datasets: getDatasets() }} options={{ responsive: true, maintainAspectRatio: false, scales: { x: xScaleConfig } }} />}
+          </div>
+          <div style={{ marginTop: "15px", display: "flex", gap: "10px" }}>
+            <button onClick={zoomToForecast}>Zoom to Forecast</button>
+            <button onClick={resetZoom}>Reset Zoom</button>
           </div>
         </div>
       )}
-
-     
     </div>
   );
 }
