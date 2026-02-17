@@ -330,20 +330,20 @@ export default function Forecasts() {
         const historicalValues = data.historical || [];
         const forecastValues = data.forecast || [];
         
-        // Combine historical and forecast into one continuous series
-        // Pad with nulls if necessary, but here we assume dates are shared
+        // Ensure data points align with the labels (dates)
+        // The backend returns group_daily[column].tolist() which is daily frequency
         const combinedData = [...historicalValues, ...forecastValues];
         
         return {
           label: group,
-          data: chartType === 'pie' ? [forecastValues.reduce((a, b) => a + b, 0)] : combinedData,
-          backgroundColor: chartType === 'pie' ? color : (chartType === 'bar' ? color : 'transparent'),
+          data: combinedData,
+          backgroundColor: chartType === 'bar' ? color : 'transparent',
           borderColor: color,
-          borderWidth: chartType === 'bar' ? 1 : 2,
+          borderWidth: 2,
           fill: false,
           tension: 0.4,
           pointRadius: 3,
-          spanGaps: true, // Handle missing data points
+          spanGaps: true,
         };
       });
     }
