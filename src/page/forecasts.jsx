@@ -199,17 +199,23 @@ export default function Forecasts() {
     const colors = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4', '#f97316'];
     
     if (forecastData.is_grouped) {
-      return Object.entries(forecastData.groups).map(([group, data], idx) => ({
-        label: group,
-        data: chartType === 'pie' ? [data.forecast.reduce((a, b) => a + b, 0)] : [...(data.historical || []), ...(data.forecast || [])],
-        backgroundColor: chartType === 'bar' ? colors[idx % colors.length] : 'transparent',
-        borderColor: colors[idx % colors.length],
-        borderWidth: 2,
-        fill: false,
-        tension: 0.4,
-        pointRadius: 3,
-        spanGaps: true,
-      }));
+      return Object.entries(forecastData.groups).map(([group, data], idx) => {
+        const color = colors[idx % colors.length];
+        return {
+          label: group,
+          data: chartType === 'pie' 
+            ? [data.forecast.reduce((a, b) => a + b, 0)] 
+            : [...(data.historical || []), ...(data.forecast || [])],
+          backgroundColor: chartType === 'bar' ? color : (chartType === 'line' ? `${color}33` : 'transparent'),
+          borderColor: color,
+          borderWidth: 2,
+          fill: chartType === 'line',
+          tension: 0.4,
+          pointRadius: 4,
+          pointHoverRadius: 6,
+          spanGaps: true,
+        };
+      });
     }
 
     if (!forecastData.isAll) {

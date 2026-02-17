@@ -68,6 +68,9 @@ async def generate_forecast(req: ForecastRequest):
                 group_daily = group_df.groupby('Date')[column].sum().reindex(global_dates, fill_value=0).reset_index()
                 group_daily.columns = ['Date', column]
                 
+                # Historical values up to global_max_date
+                historical_values = group_daily[column].tolist()
+                
                 # Simplified linear trend for groups
                 g_values = group_daily[column].values
                 g_X = np.arange(len(g_values)).reshape(-1, 1)
@@ -79,7 +82,7 @@ async def generate_forecast(req: ForecastRequest):
                 
                 group_forecasts[str(group_val)] = {
                     "forecast": [max(0, float(v)) for v in g_forecast],
-                    "historical": group_daily[column].tolist()
+                    "historical": historical_values
                 }
             
 
