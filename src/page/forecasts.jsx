@@ -201,7 +201,7 @@ export default function Forecasts() {
     if (forecastData.is_grouped) {
       return Object.entries(forecastData.groups).map(([group, data], idx) => ({
         label: group,
-        data: [...(data.historical || []), ...(data.forecast || [])],
+        data: chartType === 'pie' ? [data.forecast.reduce((a, b) => a + b, 0)] : [...(data.historical || []), ...(data.forecast || [])],
         backgroundColor: chartType === 'bar' ? colors[idx % colors.length] : 'transparent',
         borderColor: colors[idx % colors.length],
         borderWidth: 2,
