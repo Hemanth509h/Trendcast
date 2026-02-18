@@ -622,7 +622,7 @@ export default function Forecasts() {
               {chartType.charAt(0).toUpperCase() + chartType.slice(1)})
             </h2>
 
-            <div style={{ marginBottom: "15px", display: "flex", gap: "10px" }}>
+            <div style={{ marginBottom: "15px", display: "flex", justifyContent: "flex-end", gap: "10px" }}>
               <button
                 onClick={zoomToForecast}
                 style={{
