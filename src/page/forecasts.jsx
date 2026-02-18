@@ -613,6 +613,27 @@ export default function Forecasts() {
                   </span>
                 </div>
               </div>
+              <div className="metric-card primary">
+                <div className="metric-icon">🎯</div>
+                <div className="metric-content">
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "6px",
+                    }}
+                  >
+                    <span className="metric-label">Accuracy</span>
+                    <TooltipIcon
+                      metric="accuracy"
+                      explanation="Model accuracy based on R² score. Higher is better."
+                    />
+                  </div>
+                  <span className="metric-value">
+                    {metrics.accuracy?.toFixed(2) || "0.00"}%
+                  </span>
+                </div>
+              </div>
             </div>
           )}
 
@@ -768,8 +789,6 @@ export default function Forecasts() {
                   <tr>
                     <th>Date</th>
                     <th>Forecast Value</th>
-                    <th>Lower Bound (95% CI)</th>
-                    <th>Upper Bound (95% CI)</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -778,18 +797,6 @@ export default function Forecasts() {
                       <td>{date}</td>
                       <td>
                         ${forecastData?.forecast?.[index]?.toFixed(2) || "N/A"}
-                      </td>
-                      <td>
-                        $
-                        {forecastData?.confidence_bounds?.lower?.[
-                          index
-                        ]?.toFixed(2) || "N/A"}
-                      </td>
-                      <td>
-                        $
-                        {forecastData?.confidence_bounds?.upper?.[
-                          index
-                        ]?.toFixed(2) || "N/A"}
                       </td>
                     </tr>
                   ))}

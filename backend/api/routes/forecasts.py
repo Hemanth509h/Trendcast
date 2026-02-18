@@ -133,13 +133,10 @@ async def generate_forecast(req: ForecastRequest):
         future_dates_dt = [last_date + pd.Timedelta(days=i) for i in range(1, horizon + 1)]
         
         forecast_results = []
-        lower_bounds = []
-        upper_bounds = []
         
         all_predictions = ridge.predict(X_poly)
         # Ensure values and all_predictions have same shape for residuals
         residuals = values.flatten() - all_predictions.flatten()
-        std_error = np.std(residuals) if len(residuals) > 0 else (np.std(values) or 1.0)
         
         for i, f_date in enumerate(future_dates_dt):
             future_x = np.array([[len(values) + i]])
@@ -149,17 +146,11 @@ async def generate_forecast(req: ForecastRequest):
             # Month is 1-12, but factors might be indexed 0-11 or 1-12 depending on pandas
             # Check if factors exist before getting
             dow_factor = dow_factors.get(f_date.dayofweek, 1.0)
-            month_factor = month_factors.get(f_date.month, 1.0)
+            month_factor = month_factor = month_factors.get(f_date.month, 1.0)
             
             final_prediction = trend_pred * dow_factor * month_factor
             
-            z_score = 1.96
-            lower = max(0, final_prediction - (z_score * std_error))
-            upper = final_prediction + (z_score * std_error)
-            
             forecast_results.append(max(0, float(final_prediction)))
-            lower_bounds.append(float(lower))
-            upper_bounds.append(float(upper))
         
         mae = mean_absolute_error(values, all_predictions)
         mse = mean_squared_error(values, all_predictions)
@@ -173,12 +164,12 @@ async def generate_forecast(req: ForecastRequest):
                 "values": values.tolist(),
                 "trend": trend.tolist()
             },
-            "confidence_bounds": {"lower": lower_bounds, "upper": upper_bounds},
             "metrics": {
                 "mae": float(mae),
                 "mse": float(mse),
                 "r2": float(r2),
-                "rmse": float(np.sqrt(mse))
+                "rmse": float(np.sqrt(mse)),
+                "accuracy": float(max(0, min(100, r2 * 100)))
             }
         }
     except Exception as e:
