@@ -1,331 +1,249 @@
 .sales-data-page {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin: 20px 61px;
+  padding: 2rem 4rem;
+  background: #f8fafc;
+  border-bottom: 1px solid #e2e8f0;
 }
 
 .sales-data-header-section {
-  display: flex;
-  flex-direction: column;
+  margin-bottom: 1.5rem;
 }
 
 .sales-registry-header {
+  font-size: 1.875rem;
+  font-weight: 700;
+  color: #1e293b;
   margin: 0;
-  padding-bottom: 5px;
 }
 
 .page-description {
-  margin: 0;
-  color: gray;
-  font-size: 14px;
+  color: #64748b;
+  margin-top: 0.25rem;
 }
 
-.imported-filename {
-  margin-top: 5px;
-  font-size: 13px;
-  color: #666;
+.import-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: #eff6ff;
+  color: #2563eb;
+  padding: 0.375rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  margin-top: 1rem;
 }
 
-/* Buttons */
-
-.buttons {
+.action-toolbar {
   display: flex;
-  gap: 10px; /* spacing between buttons */
+  justify-content: space-between;
+  align-items: center;
+  gap: 1.5rem;
+  margin-top: 2rem;
 }
 
-.action-container {
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap; /* mobile friendly */
+.search-box {
+  position: relative;
+  flex: 1;
+  max-width: 400px;
 }
 
-
-
-
-
-
-/* Table Container Animation */
-.sales-table {
-  margin: 50px auto;
-  animation: fadeIn 0.8s ease-in-out;
-  display: flex;
-  justify-content: center;
-  overflow-x: auto;
-  padding: 0 20px;
-  height: 700px;
- 
+.search-icon {
+  position: absolute;
+  left: 0.75rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #94a3b8;
 }
 
-/* Table Style */
-.sales-table table {
+.search-box input {
   width: 100%;
-  max-width: 1400px;
-  border-collapse: separate;
-  border-spacing: 0;
-  background: #ffffff;
-  border-radius: 8px;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
-  overflow: hidden;
-  border: 1px solid #eef2f6;
+  padding: 0.625rem 0.75rem 0.625rem 2.5rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 0.5rem;
+  background: white;
+  font-size: 0.875rem;
+  transition: all 0.2s;
 }
 
-/* Header */
-.sales-table thead {
-  background: #2563eb;
-  position: sticky;
-  top: 0;
-  z-index: 10;
-}
-
-/* Header Cells */
-.sales-table th {
-  padding: 16px 20px;
-  text-align: left;
-  letter-spacing: 0.05em;
-  color: #ffffff;
-  font-weight: 600;
-  white-space: nowrap;
-  font-size: 12px;
-  text-transform: uppercase;
-  border-bottom: none;
-}
-
-/* Body Cells */
-.sales-table td {
-  padding: 16px 20px;
-  text-align: left;
-  border-bottom: 1px solid #f1f5f9;
-  transition: background-color 0.2s ease;
-  font-size: 14px;
-  color: #334155;
-}
-
-/* Row Hover */
-.sales-table tbody tr {
-  transition: background-color 0.2s ease;
-}
-
-.sales-table tbody tr:hover {
-  background: #f1f5f9 !important;
-}
-
-/* Zebra Striping */
-.sales-table tbody tr:nth-child(even) {
-  background: #fcfdfe;
-}
-
-/* Fade Animation */
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-/* Header Glow */
-@keyframes glow {
-  from {
-    box-shadow: 0 0 5px #4a90e2;
-  }
-  to {
-    box-shadow: 0 0 15px #0f61db;
-  }
-}
-
-/* Action Buttons */
-.sales-table .action-buttons {
-  display: flex;
-  gap: 8px;
-  justify-content: center;
-  align-items: center;
-}
-
-.sales-table .action-btn {
-  padding: 6px 12px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  background: #ffffff;
-  color: #2563eb;
-  cursor: pointer;
-  font-size: 12px;
-  font-weight: 500;
-  transition: all 0.2s ease;
-  white-space: nowrap;
-}
-
-.sales-table .action-btn:hover {
-  background: #f0f7ff;
-  border-color: #2563eb;
-  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.15);
-}
-
-.sales-table .action-btn.edit {
-  color: #2563eb;
-}
-
-.sales-table .action-btn.delete {
-  color: #dc2626;
-}
-
-.sales-table .action-btn.delete:hover {
-  background: #fef2f2;
-  border-color: #dc2626;
-  box-shadow: 0 2px 6px rgba(220, 38, 38, 0.15);
-}
-
-
-
-
-
-
-/* Main Form */
-.add-record-form {
-  display: flex;
-  flex-direction: column;
-  gap: 15px;
-  margin: 20px;
-}
-
-/* Table Layout */
-.add-record-form .data-table {
-  border-collapse: collapse;
-}
-
-.add-record-form .data-table td {
-  padding: 8px;
-  vertical-align: middle;
-}
-
-/* Labels */
-.add-record-form label {
-  font-weight: 500;
-  font-size: 14px;
-  color: #333;
-}
-
-/* Inputs */
-.add-record-form input {
-  padding: 8px 10px;
-  border: 1px solid #ccc;
-  border-radius: 5px;
-  font-size: 14px;
-  transition: all 0.2s ease;
-}
-
-.add-record-form input:focus {
-  border-color: #2563eb;
+.search-box input:focus {
   outline: none;
-  box-shadow: 0 0 4px rgba(37, 99, 235, 0.4);
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
 }
 
-/* Submit Button */
-.add-record-form button {
-  margin-top: 15px;
-  align-self: flex-end;
-  padding: 10px 18px;
-  background-color: #2563eb;
-  color: white;
-  border: none;
-  border-radius: 6px;
+.button-group {
+  display: flex;
+  gap: 0.75rem;
+}
+
+/* Button Variants */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.625rem 1rem;
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 500;
   cursor: pointer;
-  font-size: 14px;
-  transition:  0.2s ease;
+  transition: all 0.2s;
+  border: 1px solid transparent;
 }
 
-.add-record-form button:hover {
-  background-color: #1e40af;
+.btn-primary { background: #2563eb; color: white; }
+.btn-primary:hover { background: #1d4ed8; }
+
+.btn-secondary { background: white; color: #475569; border-color: #cbd5e1; }
+.btn-secondary:hover { background: #f1f5f9; border-color: #94a3b8; }
+
+.btn-success { background: #10b981; color: white; }
+.btn-success:hover { background: #059669; }
+
+.btn-danger { background: #ef4444; color: white; }
+.btn-danger:hover { background: #dc2626; }
+
+.btn-ghost { background: transparent; color: #64748b; }
+.btn-ghost:hover { background: #f1f5f9; }
+
+/* Table Section */
+.sales-data-container {
+  padding: 2rem 4rem;
+  min-height: 400px;
 }
 
-.add-record-form button:active {
-  background-color: #1e3a8a;
+.table-wrapper {
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.75rem;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
 }
 
-.add-record-form button:disabled {
-  background-color: #93c5fd;
-  cursor: not-allowed;
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
 }
 
+.data-table th {
+  background: #f8fafc;
+  padding: 0.875rem 1.25rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-bottom: 1px solid #e2e8f0;
+}
 
-.loading-data {
+.sortable-th {
+  cursor: pointer;
+  user-select: none;
+}
+
+.sortable-th:hover { background: #f1f5f9; }
+
+.th-content {
   display: flex;
   align-items: center;
-  gap: 10px;
-  font-size: 14px;
-  color: #555;
-  justify-content: center;
-  margin-top: 170px;
-}
-.loading-sales-data{
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-size: 14px;
-  color: #555;
-}
-.loading-data .spinner {
-  border: 4px solid #f3f3f3;
-  border-top: 4px solid #2563eb;
-  border-radius: 50%;
-  width: 16px;
-  height: 16px;
-  animation: spin 1s linear infinite;
-}
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+  gap: 0.5rem;
 }
 
+.active-sort { color: #2563eb; }
+.inactive-sort { color: #cbd5e1; }
 
+.data-table td {
+  padding: 1rem 1.25rem;
+  font-size: 0.875rem;
+  color: #334155;
+  border-bottom: 1px solid #f1f5f9;
+}
 
+.data-table tr:last-child td { border-bottom: none; }
+.data-table tr:hover { background: #f8fafc; }
 
-.no-data-container {
+.actions-cell { width: 100px; }
+.row-actions { display: flex; gap: 0.5rem; }
+
+.icon-btn {
+  padding: 0.375rem;
+  border-radius: 0.375rem;
+  border: 1px solid #e2e8f0;
+  background: white;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.icon-btn.edit:hover { color: #2563eb; border-color: #2563eb; background: #eff6ff; }
+.icon-btn.delete:hover { color: #ef4444; border-color: #ef4444; background: #fef2f2; }
+
+/* States */
+.loading-state, .empty-state {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  margin-top: 100px;
-  color: #666;
+  padding: 4rem 0;
+  color: #64748b;
 }
-.no-data-message {
-  font-size: 16px;
-  margin-top: 20px;
+
+.empty-icon { font-size: 3rem; margin-bottom: 1rem; }
+.spinner { animation: spin 1s linear infinite; margin-bottom: 1rem; color: #2563eb; }
+
+@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+/* Dialog Styling */
+.dialog-content { padding: 1.5rem; }
+
+.upload-zone {
+  border: 2px dashed #cbd5e1;
+  border-radius: 0.75rem;
+  padding: 3rem;
   text-align: center;
-
+  margin-bottom: 1.5rem;
+  transition: all 0.2s;
 }
 
-/* Responsive Design */
-@media (max-width: 768px) {
-  .sales-table {
-    margin: 30px 10px;
-    padding: 0 10px;
-  }
+.upload-zone:hover { border-color: #2563eb; background: #eff6ff; }
 
-  .sales-table table {
-    font-size: 12px;
-  }
-
-  .sales-table th,
-  .sales-table td {
-    padding: 8px 6px;
-  }
-
-  .sales-table .action-btn {
-    padding: 4px 8px;
-    font-size: 11px;
-  }
-
-  .sales-data-page {
-    flex-direction: column;
-    margin: 20px 20px;
-    gap: 20px;
-  }
-
-  .buttons {
-    width: 100%;
-  }
+.upload-label {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  color: #475569;
+  cursor: pointer;
 }
+
+.record-form .form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.form-group { display: flex; flex-direction: column; gap: 0.375rem; }
+.form-group label { font-size: 0.75rem; font-weight: 600; color: #64748b; text-transform: uppercase; }
+.form-group input {
+  padding: 0.625rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 0.375rem;
+  font-size: 0.875rem;
+}
+
+.dialog-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+@media (max-width: 1024px) {
+  .sales-data-page, .sales-data-container { padding: 2rem; }
+  .action-toolbar { flex-direction: column; align-items: stretch; }
+  .search-box { max-width: none; }
+  .record-form .form-grid { grid-template-columns: 1fr; }
+}
+
+

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   Edit2,
   Plus,
@@ -8,6 +8,9 @@ import {
   ChevronUp,
   ChevronDown,
   Upload,
+  Search,
+  ArrowUpDown,
+  FileSpreadsheet,
 } from "lucide-react";
 
 import "./salesdata.css";
@@ -23,6 +26,8 @@ export default function Salesdata() {
   const [salesdatauploaed, setsalesdatauploaed] = useState(false);
   const [formData, setFormData] = useState({});
   const [dataloading, setDataloading] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [sortConfig, setSortConfig] = useState({ key: null, direction: 'asc' });
 
   const [importedfile, setimportedfile] = useState(null);
   const [importedfilename, setimportedfilename] = useState(() => sessionStorage.getItem("sales_filename") || null);
@@ -76,6 +81,7 @@ export default function Salesdata() {
   };
 
   const deletedata = async () => {
+    if (!window.confirm("Are you sure you want to clear all data?")) return;
     try {
       const response = await fetch(getApiUrl("/api/delete"), {
         method: "GET",
@@ -110,10 +116,18 @@ export default function Salesdata() {
         throw new Error(result.error);
       }
       setsalesdata(result.data);
+      if (result.filename) {
+        setimportedfilename(result.filename);
+        sessionStorage.setItem("sales_filename", result.filename);
+      }
+      if (result.record_count !== undefined) {
+        setimportedfilerecord(result.record_count);
+        sessionStorage.setItem("sales_recordcount", result.record_count);
+      }
       // Store in sessionStorage
       sessionStorage.setItem("salesdata", JSON.stringify(result.data));
       setDataloading(false);
-      toast("Imported", "success");
+      toast("Data Synchronized", "success");
     } catch (error) {
       toast(error.message, "error");
     }
@@ -124,25 +138,30 @@ export default function Salesdata() {
 
   const handleaddrecord = async (e) => {
     e.preventDefault();
-    const response = await fetch(getApiUrl("/api/addrecord"), {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(formData),
-    });
-    const result = await response.json();
-    if (!response.ok) {
-      throw new Error(result.error);
+    try {
+      const response = await fetch(getApiUrl("/api/addrecord"), {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(formData),
+      });
+      const result = await response.json();
+      if (!response.ok) {
+        throw new Error(result.error);
+      }
+      toast("Record saved successfully!", "success");
+      setisopenadddialog(false);
+      // Clear sessionStorage to refresh data
+      sessionStorage.removeItem("salesdata");
+      fatchdata();
+    } catch (error) {
+      toast(error.message, "error");
     }
-    toast("Record added successfully!", "success");
-    setisopenadddialog(false);
-    // Clear sessionStorage to refresh data
-    sessionStorage.removeItem("salesdata");
-    fatchdata();
   };
 
   const handledeleterecord = async (record) => {
+    if (!window.confirm("Delete this record?")) return;
     try {
       const response = await fetch(getApiUrl("/api/deleterecord"), {
         method: "POST",
@@ -155,7 +174,7 @@ export default function Salesdata() {
       if (!response.ok) {
         throw new Error(result.error);
       }
-      toast("Record deleted successfully!", "success");
+      toast("Record removed", "success");
       // Clear sessionStorage to refresh data
       sessionStorage.removeItem("salesdata");
       fatchdata();
@@ -179,7 +198,7 @@ export default function Salesdata() {
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.setAttribute("download", "sales_data.csv");
+      link.setAttribute("download", `sales_export_${new Date().toISOString().split('T')[0]}.csv`);
       document.body.appendChild(link);
       link.click();
       link.remove();
@@ -187,122 +206,146 @@ export default function Salesdata() {
       toast(error.message, "error");
     }
   };
+
+  const handleSort = (key) => {
+    let direction = 'asc';
+    if (sortConfig.key === key && sortConfig.direction === 'asc') {
+      direction = 'desc';
+    }
+    setSortConfig({ key, direction });
+  };
+
+  const filteredAndSortedData = useMemo(() => {
+    let result = [...salesdata];
+
+    // Search filter
+    if (searchTerm) {
+      result = result.filter(item => 
+        Object.values(item).some(val => 
+          String(val).toLowerCase().includes(searchTerm.toLowerCase())
+        )
+      );
+    }
+
+    // Sort
+    if (sortConfig.key) {
+      result.sort((a, b) => {
+        const aVal = a[sortConfig.key];
+        const bVal = b[sortConfig.key];
+        
+        if (aVal < bVal) return sortConfig.direction === 'asc' ? -1 : 1;
+        if (aVal > bVal) return sortConfig.direction === 'asc' ? 1 : -1;
+        return 0;
+      });
+    }
+
+    return result;
+  }, [salesdata, searchTerm, sortConfig]);
+
   return (
     <>
       <div className="sales-data-page">
         <div className="sales-data-header-section">
           <h1 className="sales-registry-header">Sales Registry</h1>
-
           <p className="page-description">
-            Manage and track your historical sales data points.
+            Monitor and maintain your commercial performance records.
           </p>
-
           {importedfilename && (
-            <p className="imported-filename">
-              Imported file: {importedfilename} with {importedfilerecord}{" "}
-              records
-            </p>
+            <div className="import-status-badge">
+              <FileSpreadsheet size={14} />
+              <span>{importedfilename} • {importedfilerecord} records</span>
+            </div>
           )}
         </div>
 
-        <div className="buttons">
-          <div className="action-container">
-            <button className="btn btn-refrash" onClick={fatchdata}>
-              Refresh
+        <div className="action-toolbar">
+          <div className="search-box">
+            <Search size={18} className="search-icon" />
+            <input 
+              type="text" 
+              placeholder="Filter records..." 
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+          
+          <div className="button-group">
+            <button className="btn btn-secondary" onClick={fatchdata}>
+              Sync
             </button>
-
-            <button className="btn btn-export" onClick={() => exportcsv()}>
-              Export CSV
+            <button className="btn btn-secondary" onClick={exportcsv}>
+              Export
             </button>
-
-            <button className="btn btn-clear" onClick={deletedata}>
+            <button className="btn btn-danger" onClick={deletedata}>
               <Trash2 size={16} />
-              Clear Data
+              Reset
             </button>
-
-            <button
-              className="btn btn-import"
-              onClick={() => setisopenimportdialog(true)}
-            >
+            <button className="btn btn-primary" onClick={() => setisopenimportdialog(true)}>
               <Upload size={16} />
-              Import CSV
+              Import
             </button>
-
-            <button
-              className="btn btn-add"
-              onClick={() => {
-                setisopenadddialog(true);
-              }}
-            >
+            <button className="btn btn-success" onClick={() => { setFormData({}); setisopenadddialog(true); }}>
               <Plus size={16} />
-              Add Record
+              Add
             </button>
           </div>
         </div>
       </div>
 
-      {/* Data Section */}
       <div className="sales-data-container">
-        <div className="upload-success-message">
-          {dataloading ? (
-            <div className="loading-data">
-              <p className="loading-sales-data">Loading sales data...</p>
-              <Loader2 className="spinner-sm" size={16} />
-            </div>
-          ) : salesdata && salesdata.length > 0 ? (
-            <div className="sales-table">
-              <table>
-                <thead>
-                  <tr>
-                    {Object.keys(salesdata[0]).map((key) => (
-                      <th key={key}>{key}</th>
-                    ))}
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {salesdata.map((record, index) => (
-                    <tr key={index}>
-                      {Object.values(record).map((value, i) => (
-                        <td key={i}>
-                          {typeof value === "object"
-                            ? JSON.stringify(value)
-                            : value}
-                        </td>
-                      ))}
-                      <td>
-                        <div style={{ display: "flex", gap: 10 }}>
-                          <button
-                            className="btn btn-edit-small"
-                            onClick={() => handlededit(record)}
-                          >
-                            Edit
-                          </button>
-                          <button
-                            className="btn btn-delete-small"
-                            onClick={() => handledeleterecord(record)}
-                          >
-                            Delete
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
+        {dataloading ? (
+          <div className="loading-state">
+            <Loader2 className="spinner" size={32} />
+            <p>Fetching sales intelligence...</p>
+          </div>
+        ) : filteredAndSortedData.length > 0 ? (
+          <div className="table-wrapper">
+            <table className="data-table">
+              <thead>
+                <tr>
+                  {Object.keys(salesdata[0]).map((key) => (
+                    <th key={key} onClick={() => handleSort(key)} className="sortable-th">
+                      <div className="th-content">
+                        {key}
+                        <ArrowUpDown size={12} className={sortConfig.key === key ? "active-sort" : "inactive-sort"} />
+                      </div>
+                    </th>
                   ))}
-                </tbody>
-              </table>
-            </div>
-          ) : (
-            <div className="no-data-container">
-              <p className="no-data-message">
-                No sales data available. Please import a CSV file to get
-                started.
-              </p>
-            </div>
-          )}
-        </div>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredAndSortedData.map((record, index) => (
+                  <tr key={index}>
+                    {Object.values(record).map((value, i) => (
+                      <td key={i}>
+                        {typeof value === "object" ? JSON.stringify(value) : String(value)}
+                      </td>
+                    ))}
+                    <td className="actions-cell">
+                      <div className="row-actions">
+                        <button className="icon-btn edit" onClick={() => handlededit(record)} title="Edit">
+                          <Edit2 size={14} />
+                        </button>
+                        <button className="icon-btn delete" onClick={() => handledeleterecord(record)} title="Delete">
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className="empty-state">
+            <div className="empty-icon">📂</div>
+            <h3>No Records Found</h3>
+            <p>Start by importing a CSV or adding a manual entry.</p>
+          </div>
+        )}
       </div>
 
-      {/* Import Dialog */}
       <Dialog
         isopen={isopenimportdialog}
         isclose={() => {
@@ -310,73 +353,27 @@ export default function Salesdata() {
           setimportedfile(null);
           setisuploding(false);
         }}
-        title="Import Sales Data"
+        title="Import Intelligence"
       >
-        <div className="dialog-body">
-          <div
-            className="dialog-icon"
-            style={{
-              backgroundColor: "#0303034d",
-              height: 58,
-              borderRadius: 8,
-              display: "flex",
-              justifyContent: "center",
-              alignItems: "center",
-              gap: 10,
-              marginTop: 20
-            }}
-          >
-            <Upload size={20} style={{ color: "#4866ca" }} />
+        <div className="dialog-content">
+          <div className="upload-zone">
             <input
               type="file"
+              id="file-upload"
               accept=".csv,.xlsx,.xls"
               onChange={(e) => setimportedfile(e.target.files[0])}
-              style={{
-                padding: "10px",
-                border: "2px solid #4866ca",
-                borderRadius: "6px",
-                backgroundColor: "#f9f9f9",
-                cursor: "pointer",
-                width: "250px",
-                fontSize: "14px",
-              }}
+              hidden
             />
+            <label htmlFor="file-upload" className="upload-label">
+              <Upload size={32} />
+              <span>{importedfile ? importedfile.name : "Choose CSV file"}</span>
+            </label>
           </div>
-
-          <p
-            className="dialog-instruction"
-            style={{ margin: "15px 0", textAlign: "center" }}
-          >
-            Please select a CSV file containing your sales data. Ensure the file
-            follows the required format.
-          </p>
-          <div
-            className="dialog-actions"
-            style={{ display: "flex", gap: "10px", justifyContent: "center" }}
-          >
-            <button
-              className="btn btn-upload"
-              disabled={!importedfile || isuploding}
-              onClick={handleupload}
-            >
-              {isuploding ? (
-                <Loader2 className="spinner-sm" size={16} />
-              ) : (
-                <Upload size={16} />
-              )}
-
-              <span>Upload</span>
-            </button>
-
-            <button
-              className="btn btn-cancel"
-              onClick={() => {
-                setisopenimportdialog(false);
-                setimportedfile(null);
-                setisuploding(false);
-              }}
-            >
-              Cancel
+          <div className="dialog-footer">
+            <button className="btn btn-ghost" onClick={() => setisopenimportdialog(false)}>Cancel</button>
+            <button className="btn btn-primary" disabled={!importedfile || isuploding} onClick={handleupload}>
+              {isuploding ? <Loader2 className="spinner-sm" /> : <Upload size={16} />}
+              Upload
             </button>
           </div>
         </div>
@@ -385,54 +382,30 @@ export default function Salesdata() {
       <Dialog
         isopen={isopenadddialog}
         isclose={() => setisopenadddialog(false)}
-        title="Add Sales Record"
+        title={formData.id ? "Update Record" : "New Sales Entry"}
       >
-        <div className="dialog-body">
-          <p style={{ textAlign: "center" }}>
-            Form to add a new sales record goes here.
-          </p>
-          <div>
-            <form className="add-record-form" onSubmit={handleaddrecord}>
-              <table className="data-table">
-                <tbody>
-                  {salesdata && salesdata.length > 0 ? (
-                    Object.keys(salesdata[0]).map((key) => (
-                      <tr key={key}>
-                        <td>
-                          <label htmlFor={key}>{key}</label>
-                        </td>
-
-                        <td>
-                          <input
-                            type="text"
-                            name={key}
-                            id={key}
-                            value={formData[key] || ""}
-                            onChange={(e) =>
-                              setFormData({
-                                ...formData,
-                                [key]: e.target.value,
-                              })
-                            }
-                            placeholder={`Enter ${key}`}
-                            required
-                          />
-                        </td>
-                      </tr>
-                    ))
-                  ) : (
-                    <tr>
-                      <td colSpan="2">No data fields available.</td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-
-              <br />
-
-              <button type="submit">Submit</button>
-            </form>
-          </div>
+        <div className="dialog-content">
+          <form className="record-form" onSubmit={handleaddrecord}>
+            <div className="form-grid">
+              {(salesdata.length > 0 ? Object.keys(salesdata[0]) : ["Date", "Amount", "Category"]).map((key) => (
+                <div className="form-group" key={key}>
+                  <label>{key}</label>
+                  <input
+                    type="text"
+                    value={formData[key] || ""}
+                    onChange={(e) => setFormData({ ...formData, [key]: e.target.value })}
+                    placeholder={`Enter ${key.toLowerCase()}`}
+                    required={key !== "id"}
+                    disabled={key === "id"}
+                  />
+                </div>
+              ))}
+            </div>
+            <div className="dialog-footer">
+              <button type="button" className="btn btn-ghost" onClick={() => setisopenadddialog(false)}>Discard</button>
+              <button type="submit" className="btn btn-primary">Save Changes</button>
+            </div>
+          </form>
         </div>
       </Dialog>
     </>
