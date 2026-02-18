@@ -69,7 +69,8 @@
   margin-left: 0;
 }
 
-.btn-generate, .btn-all-columns {
+.btn-generate,
+.btn-all-columns {
   height: 42px;
   padding: 0 24px;
   border-radius: 8px;
@@ -80,11 +81,13 @@
   white-space: nowrap;
 }
 
-.btn-generate {
+.btn-generate,
+.btn-all-columns {
   background-color: #2563eb;
 }
 
-.btn-generate:hover {
+.btn-generate:hover,
+.btn-all-columns:hover {
   background-color: #1d4ed8;
 }
 .select-column:focus {
@@ -92,11 +95,6 @@
   outline: none;
   box-shadow: 0 0 4px rgba(37, 99, 235, 0.4);
 }
-
-
-
-
-
 
 .metrics-grid {
   display: grid;
@@ -112,7 +110,7 @@
 @media (max-width: 1024px) {
   .metrics-grid {
     grid-template-columns: repeat(2, 1fr); /* 2 columns */
-    grid-template-rows: auto;              /* rows adjust */
+    grid-template-rows: auto; /* rows adjust */
   }
 }
 .metric-card {
@@ -122,7 +120,9 @@
   padding: 16px;
   border-radius: 12px;
   background: #f9fafb;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
 }
 
 .metric-card:hover {
@@ -132,8 +132,8 @@
 
 .metric-icon {
   font-size: 1.8rem;
-  background-color:#007bff ;
-  padding:8px;
+  background-color: #007bff;
+  padding: 8px;
   border-radius: 10px;
 }
 
@@ -209,4 +209,28 @@
 
 .forecast-table tbody tr:last-child td {
   border-bottom: none;
+}
+
+.zoomorresetbutton {
+  padding: "8px 16px";
+  background-color: #10b981;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 14px;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.zoomorresetbutton:hover {
+  background-color: #059669;
+  transform: scale(2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+.zoomorresetbutton:focus {
+  background-color: #10b981;
+  transform: scale(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }

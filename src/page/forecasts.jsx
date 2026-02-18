@@ -64,6 +64,8 @@ export default function Forecasts() {
 
   const chartRef = React.useRef(null);
 
+  const [zoomorreset, setzoomorreset] = React.useState(false);
+
   useEffect(() => {
     if (salesdata.length === 0 && !sessionStorage.getItem("salesdata")) {
       fetchdata();
@@ -207,6 +209,7 @@ export default function Forecasts() {
   };
 
   const resetZoom = () => setZoomRange({ min: null, max: null });
+
 
   const TooltipIcon = ({ metric, explanation }) => (
     <div style={{ position: "relative", display: "flex", cursor: "help" }}>
@@ -361,6 +364,10 @@ export default function Forecasts() {
       ];
     });
   };
+
+
+
+  
 
   return (
     <div className="forecasts-container">
@@ -670,6 +677,11 @@ export default function Forecasts() {
               >
                 ↺ Reset Zoom
               </button>
+
+              
+
+            
+
               <button
                 onClick={() => setZoomMode(zoomMode === "x" ? "xy" : "x")}
                 style={{
