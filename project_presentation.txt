@@ -1,0 +1,42 @@
+# Project Overview: TrendCast Sales Intelligence
+TrendCast is a sophisticated sales management and forecasting platform that bridges the gap between raw data storage and actionable business intelligence. It allows users to manage their sales history while leveraging advanced time-series forecasting to predict future performance.
+
+---
+
+# Presentation Points (PPT Outline)
+
+## Slide 1: Executive Summary
+- The Vision: A comprehensive tool for commercial performance monitoring and predictive analytics.
+- Core Value: Transforms historical sales data into future-looking insights using modern machine learning models.
+- Target Audience: Sales managers, business analysts, and retail stakeholders.
+
+## Slide 2: Key Features
+- Dynamic Sales Registry: Full CRUD (Create, Read, Update, Delete) capabilities with a high-performance data table.
+- Seamless Data Integration: Built-in support for CSV imports (optimized for datasets like Walmart Sales) and one-click data exports.
+- Predictive Forecasting: Automated time-series analysis that generates visual forecasts based on historical trends.
+- Advanced UI/UX: Features a professional "Intelligence-Grade" aesthetic with sidebar navigation, toast notifications, and responsive layouts.
+
+## Slide 3: Technical Architecture
+- Frontend: Built with React and Vite for a lightning-fast user experience.
+- Data Visualization: Powered by Chart.js with interactive zooming and panning for deep-dive analysis.
+- Backend: A robust Flask API (hosted on Render) that handles data processing and forecasting logic.
+- Styling: Custom CSS modularized by page (e.g., salesdata.css, forecasts.css) for maintainability.
+
+## Slide 4: Data & Security
+- Data Integrity: Implements Zod for schema validation to ensure high-quality data entry.
+- Intelligence Sync: Real-time synchronization with the backend to ensure data is always up-to-date across sessions.
+- Sample Intelligence: Includes pre-loaded datasets (like the Walmart_Sales_Dataset) for immediate platform demonstration.
+
+## Slide 5: Future Roadmap
+- Enhanced Models: Integration of more complex forecasting algorithms (e.g., Prophet, XGBoost).
+- Multi-tenant Support: Individual user accounts and workspace separation.
+- Automated Alerts: Notification system for when sales hit specific thresholds or deviate from forecasts.
+
+---
+
+# Project Structure Explanation
+The project is organized into a clean, modern React structure:
+- /src/page: Contains the main views (Sales Registry and Forecasting engine).
+- /src/ui: Holds reusable interface components like the Sidebar, Dialogs, and Toast notifications.
+- /src/utils: Centralizes API communication logic to keep components clean and focused on the UI.
+- /sample_data: Provides ready-to-use CSV files for testing the import functionality.
