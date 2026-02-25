@@ -5,7 +5,7 @@ import numpy as np
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
-from statsmodels.tsa.holtwinters import ExponentialSmoothing
+from statsmodels.tsa.statespace.sarimax import SARIMAX
 
 router = APIRouter()
 
@@ -14,7 +14,7 @@ DATA_FILE = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path
 class ForecastRequest(BaseModel):
     column: str = "Weekly_Sales"
     horizon: int = 30
-    model: str = "timeseries"
+    model: str = "sarima"
     group_by: str | None = None
 
 @router.post("/generateforecast")
@@ -49,19 +49,27 @@ async def generate_forecast(req: ForecastRequest):
         if len(series) < 2:
             raise HTTPException(status_code=400, detail="Not enough data points for time series forecasting")
 
-        # Holt-Winters Exponential Smoothing
-        # For small datasets, we use simpler models
-        if len(series) < 14:
-            model = ExponentialSmoothing(series, trend='add', seasonal=None, initialization_method="estimated")
-        else:
-            # Weekly seasonality (7 days)
-            model = ExponentialSmoothing(series, trend='add', seasonal='add', seasonal_periods=7, initialization_method="estimated")
-        
-        model_fit = model.fit()
-        forecast = model_fit.forecast(horizon)
-        
-        # Historical fitted values for trend line and metrics
-        historical_pred = model_fit.fittedvalues
+        # SARIMA Model (Seasonal AutoRegressive Integrated Moving Average)
+        # Using standard parameters that work well for general retail/sales data
+        # (p,d,q) = (1,1,1), (P,D,Q,s) = (1,1,1,7) for weekly seasonality
+        try:
+            if len(series) > 14:
+                model = SARIMAX(series, order=(1, 1, 1), seasonal_order=(1, 1, 1, 7), 
+                                enforce_stationarity=False, enforce_invertibility=False)
+            else:
+                model = SARIMAX(series, order=(1, 1, 1), enforce_stationarity=False, 
+                                enforce_invertibility=False)
+            
+            model_fit = model.fit(disp=False)
+            forecast = model_fit.get_forecast(steps=horizon).predicted_mean
+            historical_pred = model_fit.fittedvalues
+        except Exception:
+            # Simple fallback if SARIMA fails to converge
+            from statsmodels.tsa.holtwinters import ExponentialSmoothing
+            model = ExponentialSmoothing(series, trend='add', seasonal='add', seasonal_periods=7)
+            model_fit = model.fit()
+            forecast = model_fit.forecast(horizon)
+            historical_pred = model_fit.fittedvalues
         
         mae = mean_absolute_error(series, historical_pred)
         mse = mean_squared_error(series, historical_pred)
