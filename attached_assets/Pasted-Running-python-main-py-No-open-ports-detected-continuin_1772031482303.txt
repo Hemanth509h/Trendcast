@@ -1,0 +1,50 @@
+Running 'python main.py'
+==> No open ports detected, continuing to scan...
+==> Docs on specifying a port: https://render.com/docs/web-services#port-binding
+Form data requires "python-multipart" to be installed. 
+You can install "python-multipart" with: 
+pip install python-multipart
+Traceback (most recent call last):
+  File "/opt/render/project/src/backend/main.py", line 8, in <module>
+    from api.routes import sales, forecasts
+  File "/opt/render/project/src/backend/api/routes/sales.py", line 12, in <module>
+    @router.post("/upload")
+     ~~~~~~~~~~~^^^^^^^^^^^
+  File "/opt/render/project/src/.venv/lib/python3.14/site-packages/fastapi/routing.py", line 1179, in decorator
+    self.add_api_route(
+    ~~~~~~~~~~~~~~~~~~^
+        path,
+        ^^^^^
+    ...<23 lines>...
+        generate_unique_id_function=generate_unique_id_function,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/opt/render/project/src/.venv/lib/python3.14/site-packages/fastapi/routing.py", line 1115, in add_api_route
+    route = route_class(
+        self.prefix + path,
+    ...<27 lines>...
+        ),
+    )
+  File "/opt/render/project/src/.venv/lib/python3.14/site-packages/fastapi/routing.py", line 690, in __init__
+    self.dependant = get_dependant(
+                     ~~~~~~~~~~~~~^
+        path=self.path_format, call=self.endpoint, scope="function"
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/opt/render/project/src/.venv/lib/python3.14/site-packages/fastapi/dependencies/utils.py", line 279, in get_dependant
+    param_details = analyze_param(
+        param_name=param_name,
+    ...<2 lines>...
+        is_path_param=is_path_param,
+    )
+  File "/opt/render/project/src/.venv/lib/python3.14/site-packages/fastapi/dependencies/utils.py", line 502, in analyze_param
+    ensure_multipart_is_installed()
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "/opt/render/project/src/.venv/lib/python3.14/site-packages/fastapi/dependencies/utils.py", line 108, in ensure_multipart_is_installed
+    raise RuntimeError(multipart_not_installed_error) from None
+RuntimeError: Form data requires "python-multipart" to be installed. 
+You can install "python-multipart" with: 
+pip install python-multipart
+==> Exited with status 1
