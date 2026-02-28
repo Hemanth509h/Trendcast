@@ -5,14 +5,13 @@ import "../ui/ui.css";
 import { getApiUrl } from "../utils/api";
 import { Info } from "lucide-react";
 import Dialog from "../ui/Dialog";
-import { Line, Bar, Pie } from "react-chartjs-2";
+import { Line, Pie } from "react-chartjs-2";
 import {
   Chart as ChartJS,
   CategoryScale,
   LinearScale,
   PointElement,
   LineElement,
-  BarElement,
   ArcElement,
   Title,
   Tooltip,
@@ -26,7 +25,6 @@ ChartJS.register(
   LinearScale,
   PointElement,
   LineElement,
-  BarElement,
   ArcElement,
   Title,
   Tooltip,
@@ -131,11 +129,15 @@ export default function Forecasts() {
         }),
       });
       const result = await response.json();
+      console.log("forecast result", result); // debug
       if (!response.ok)
         throw new Error(result.error || "Failed to generate forecast");
       setForecastData(result);
       setMetrics(result.metrics);
       toast("Forecast generated successfully!", "success");
+      if (groupBy && !result.is_grouped) {
+        toast(`Warning: grouping by \"${groupBy}\" had no effect`, "warning");
+      }
     } catch (error) {
       toast(error.message, "error");
     } finally {
@@ -271,21 +273,42 @@ export default function Forecasts() {
     ];
 
     if (forecastData.is_grouped) {
-      return Object.entries(forecastData.groups).map(([group, data], idx) => ({
-        label: group,
-        data:
-          chartType === "pie"
-            ? [data.forecast.reduce((a, b) => a + b, 0)]
-            : [...(data.historical || []), ...(data.forecast || [])],
-        backgroundColor:
-          chartType === "bar" ? colors[idx % colors.length] : "transparent",
-        borderColor: colors[idx % colors.length],
-        borderWidth: 2,
-        fill: false,
-        tension: 0.4,
-        pointRadius: 3,
-        spanGaps: true,
-      }));
+      // determine unified historical dates across all groups
+      const histDateSet = new Set();
+      Object.values(forecastData.groups || {}).forEach((g) => {
+        (g.dates || []).forEach((d) => histDateSet.add(d));
+      });
+      const histDates = Array.from(histDateSet).sort();
+      const fcstDates = forecastData.dates || [];
+
+      return Object.entries(forecastData.groups).map(([group, data], idx) => {
+        // build a map of date -> historical value for this group
+        const histMap = {};
+        (data.dates || []).forEach((d, i) => {
+          if (data.historical && data.historical[i] != null) {
+            histMap[d] = data.historical[i];
+          }
+        });
+        const histArr = histDates.map((d) =>
+          histMap[d] !== undefined ? histMap[d] : null,
+        );
+        const fcstArr = data.forecast ? [...data.forecast] : [];
+        return {
+          label: group,
+          data:
+            chartType === "pie"
+              ? [fcstArr.reduce((a, b) => a + b, 0)]
+              : [...histArr, ...fcstArr],
+          backgroundColor:
+            chartType === "bar" ? colors[idx % colors.length] : "transparent",
+          borderColor: colors[idx % colors.length],
+          borderWidth: 2,
+          fill: false,
+          tension: 0.4,
+          pointRadius: 3,
+          spanGaps: true,
+        };
+      });
     }
 
     if (!forecastData.isAll) {
@@ -433,6 +456,7 @@ export default function Forecasts() {
             <option value="Product_Category">Product Category</option>
           </select>
         </label>
+        {/* only line chart is supported now */}
         <label>
           Chart:
           <select
@@ -441,7 +465,6 @@ export default function Forecasts() {
             onChange={(e) => setChartType(e.target.value)}
           >
             <option value="line">Line Chart</option>
-            <option value="bar">Bar Chart</option>
           </select>
         </label>
         <button
@@ -527,7 +550,8 @@ export default function Forecasts() {
         </div>
       </Dialog>
 
-      {((metrics && forecastData) || (forecastData && forecastData.isAll)) && (
+      {/* show results once we have any forecastData; metrics shown separately */}
+      {forecastData && (
         <div>
           {!forecastData.isAll && metrics && (
             <div className="metrics-grid">
@@ -630,7 +654,9 @@ export default function Forecasts() {
                     />
                   </div>
                   <span className="metric-value">
-                    {metrics.accuracy?.toFixed(2) || "0.00"}%
+                    {metrics.accuracy != null && metrics.accuracy > 0
+                      ? `${metrics.accuracy.toFixed(2)}%`
+                      : "N/A"}
                   </span>
                 </div>
               </div>
@@ -742,11 +768,12 @@ export default function Forecasts() {
                   data={{
                     labels: forecastData.is_grouped
                       ? (() => {
-                          const firstGroup = Object.values(
-                            forecastData.groups,
-                          )[0];
-                          if (!firstGroup) return forecastData.dates || [];
-                          const histDates = firstGroup.dates || [];
+                          // union all group historical dates to ensure consistent labels
+                          const histDateSet = new Set();
+                          Object.values(forecastData.groups || {}).forEach((g) => {
+                            (g.dates || []).forEach((d) => histDateSet.add(d));
+                          });
+                          const histDates = Array.from(histDateSet).sort();
                           const fcstDates = forecastData.dates || [];
                           return [...histDates, ...fcstDates];
                         })()
@@ -784,24 +811,78 @@ export default function Forecasts() {
 
             <h2>Forecast Results Table</h2>
             <div className="forecast-table-container">
-              <table className="forecast-table">
-                <thead>
-                  <tr>
-                    <th>Date</th>
-                    <th>Forecast Value</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {forecastData?.dates?.map((date, index) => (
-                    <tr key={index}>
-                      <td>{date}</td>
-                      <td>
-                        ${forecastData?.forecast?.[index]?.toFixed(2) || "N/A"}
-                      </td>
+              {forecastData.is_grouped ? (
+                (() => {
+                  // build unified date list as used for chart
+                  const histDateSet = new Set();
+                  Object.values(forecastData.groups || {}).forEach((g) => {
+                    (g.dates || []).forEach((d) => histDateSet.add(d));
+                  });
+                  const histDates = Array.from(histDateSet).sort();
+                  const fcstDates = forecastData.dates || [];
+                  const allDates = [...histDates, ...fcstDates];
+                  const groupsArray = Object.entries(forecastData.groups || {});
+                  return (
+                    <table className="forecast-table">
+                      <thead>
+                        <tr>
+                          <th>Date</th>
+                          {groupsArray.map(([grp]) => (
+                            <th key={grp}>{grp}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {allDates.map((date, idx) => (
+                          <tr key={idx}>
+                            <td>{date}</td>
+                            {groupsArray.map(([grp, data]) => {
+                              let value = null;
+                              if (idx < histDates.length) {
+                                const histIdx = data.dates?.indexOf(date);
+                                if (histIdx >= 0 && data.historical) {
+                                  value = data.historical[histIdx];
+                                }
+                              } else {
+                                const fcstIdx = idx - histDates.length;
+                                if (data.forecast && data.forecast[fcstIdx] != null) {
+                                  value = data.forecast[fcstIdx];
+                                }
+                              }
+                              return (
+                                <td key={grp}>
+                                  {value != null ? `$${value.toFixed(2)}` : "N/A"}
+                                </td>
+                              );
+                            })}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  );
+                })()
+              ) : (
+                <table className="forecast-table">
+                  <thead>
+                    <tr>
+                      <th>Date</th>
+                      <th>Forecast Value</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {forecastData?.dates?.map((date, index) => (
+                      <tr key={index}>
+                        <td>{date}</td>
+                        <td>
+                          {forecastData?.forecast?.[index] != null
+                            ? `$${forecastData.forecast[index].toFixed(2)}`
+                            : "N/A"}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
             </div>
           </div>
         </div>
