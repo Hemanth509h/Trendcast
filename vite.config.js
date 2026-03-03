@@ -16,7 +16,8 @@ export default defineConfig({
 
     proxy: {
       "/api": {
-        target: "http://127.0.0.1:8000",
+        // development backend is now running on port 8001 to avoid conflicts
+        target: "http://127.0.0.1:8001",
         changeOrigin: true,
       },
     },

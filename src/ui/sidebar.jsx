@@ -8,7 +8,10 @@ import {
   Trash2,
   Loader2,
   Sparkles,
+  LogOut,
+  User,
 } from "lucide-react";
+import { useAuth } from "../page/AuthModal";
 import "./ui.css";
 
 const path = [
@@ -18,6 +21,11 @@ const path = [
 
 export function Sidebar() {
   const [location] = useLocation();
+  const { user, logout } = useAuth();
+
+  const handleLogout = async () => {
+    await logout();
+  };
 
   return (
     <>
@@ -58,6 +66,24 @@ export function Sidebar() {
               latest sales data.
             </p>
           </div>
+        </div>
+        
+        {/* User Section */}
+        <div className="sidebar-user">
+          <hr style={{ margin: "10px 0" }} />
+          <div className="user-info">
+            <div className="user-avatar">
+              <User size={18} />
+            </div>
+            <div className="user-details">
+              <p className="user-name">{user?.full_name || user?.email}</p>
+              <p className="user-email">{user?.email}</p>
+            </div>
+          </div>
+          <button className="logout-button" onClick={handleLogout}>
+            <LogOut size={18} />
+            <span>Logout</span>
+          </button>
         </div>
       </aside>
     </>

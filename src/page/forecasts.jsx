@@ -98,10 +98,13 @@ export default function Forecasts() {
 
   const fetchdata = async () => {
     try {
+      const token = localStorage.getItem("authToken");
+      const headers = token ? { Authorization: `Bearer ${token}` } : {};
       const response = await fetch(getApiUrl("/api/salesdata"), {
         method: "GET",
+        headers,
       });
-      const result = await response.json();
+        const result = await response.json();
       if (!response.ok) throw new Error(result.error);
       setsalesdata(result.data);
       sessionStorage.setItem("salesdata", JSON.stringify(result.data));
@@ -118,9 +121,14 @@ export default function Forecasts() {
     setIsLoading(true);
     setIsAllColumnsMode(false);
     try {
+      const token = localStorage.getItem("authToken");
+      const headers = {
+        "Content-Type": "application/json",
+        ...(token && { Authorization: `Bearer ${token}` }),
+      };
       const response = await fetch(getApiUrl("/api/generateforecast"), {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers,
         body: JSON.stringify({
           column: selectedColumn,
           horizon: parseInt(selectedHorizon),
@@ -169,9 +177,14 @@ export default function Forecasts() {
     try {
       const allResults = await Promise.all(
         columnsToProcess.map(async (col) => {
+          const token = localStorage.getItem("authToken");
+          const headers = {
+            "Content-Type": "application/json",
+            ...(token && { Authorization: `Bearer ${token}` }),
+          };
           const response = await fetch(getApiUrl("/api/generateforecast"), {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers,
             body: JSON.stringify({
               column: col,
               horizon: parseInt(selectedHorizon),
@@ -890,3 +903,4 @@ export default function Forecasts() {
     </div>
   );
 }
+

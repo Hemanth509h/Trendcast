@@ -53,8 +53,11 @@ export default function Salesdata() {
     body.append("file", importedfile);
 
     try {
+      const token = localStorage.getItem("authToken");
+      const headers = token ? { Authorization: `Bearer ${token}` } : {};
       const response = await fetch(getApiUrl("/api/upload"), {
         method: "POST",
+        headers,
         body,
       });
       const result = await response.json();
@@ -83,8 +86,11 @@ export default function Salesdata() {
   const deletedata = async () => {
     if (!window.confirm("Are you sure you want to clear all data?")) return;
     try {
+      const token = localStorage.getItem("authToken");
+      const headers = token ? { Authorization: `Bearer ${token}` } : {};
       const response = await fetch(getApiUrl("/api/delete"), {
         method: "GET",
+        headers,
       });
       const result = await response.json();
 
@@ -108,8 +114,11 @@ export default function Salesdata() {
   const fatchdata = async () => {
     try {
       setDataloading(true);
+      const token = localStorage.getItem("authToken");
+      const headers = token ? { Authorization: `Bearer ${token}` } : {};
       const response = await fetch(getApiUrl("/api/salesdata"), {
         method: "GET",
+        headers,
       });
       const result = await response.json();
       if (!response.ok) {
@@ -139,11 +148,14 @@ export default function Salesdata() {
   const handleaddrecord = async (e) => {
     e.preventDefault();
     try {
+      const token = localStorage.getItem("authToken");
+      const headers = {
+        "Content-Type": "application/json",
+        ...(token && { Authorization: `Bearer ${token}` }),
+      };
       const response = await fetch(getApiUrl("/api/addrecord"), {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers,
         body: JSON.stringify(formData),
       });
       const result = await response.json();
@@ -163,11 +175,14 @@ export default function Salesdata() {
   const handledeleterecord = async (record) => {
     if (!window.confirm("Delete this record?")) return;
     try {
+      const token = localStorage.getItem("authToken");
+      const headers = {
+        "Content-Type": "application/json",
+        ...(token && { Authorization: `Bearer ${token}` }),
+      };
       const response = await fetch(getApiUrl("/api/deleterecord"), {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers,
         body: JSON.stringify({ record }),
       });
       const result = await response.json();
@@ -190,7 +205,12 @@ export default function Salesdata() {
 
   const exportcsv = async () => {
     try {
-      const response = await fetch(getApiUrl("/api/export"), { method: "GET" });
+      const token = localStorage.getItem("authToken");
+      const headers = token ? { Authorization: `Bearer ${token}` } : {};
+      const response = await fetch(getApiUrl("/api/export"), { 
+        method: "GET",
+        headers,
+      });
       if (!response.ok) {
         throw new Error("Failed to export data");
       }
@@ -411,3 +431,4 @@ export default function Salesdata() {
     </>
   );
 }
+

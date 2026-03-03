@@ -1,18 +1,23 @@
 import pandas as pd
 import numpy as np
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 from statsmodels.tsa.statespace.sarimax import SARIMAX
 from supabase import create_client, Client
+from datetime import datetime
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 router = APIRouter()
 
 # ==========================
 # SUPABASE CONFIG
 # ==========================
-SUPABASE_URL = "https://coztxkaoyxphgvoulbel.supabase.co"
-SUPABASE_KEY = "sb_publishable_9gj0hwRnm6zbte_e_gH04w_GjPJ8lTi"
+SUPABASE_URL = os.getenv("SUPABASE_URL", "https://coztxkaoyxphgvoulbel.supabase.co")
+SUPABASE_KEY = os.getenv("SUPABASE_KEY", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNvenR4a2FveXhwaGd2b3VsYmVsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIxOTI3MTEsImV4cCI6MjA4Nzc2ODcxMX0.Pa8rf_fFIAaIj0wiDGLoi11qP9mRqJl8YP7Qbt3ojkU")
 
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
@@ -28,24 +33,52 @@ class ForecastRequest(BaseModel):
 
 
 # ==========================
+# HELPER: GET USER ID FROM REQUEST
+# ==========================
+def get_user_id_from_request(request: Request) -> str:
+    """Extract and verify user_id from request token"""
+    token = getattr(request.state, "token", None)
+    if not token:
+        raise HTTPException(status_code=401, detail="No authentication token provided")
+    
+    try:
+        user = supabase.auth.get_user(token)
+        if not user:
+            raise HTTPException(status_code=401, detail="Invalid token")
+        return user.user.id
+    except Exception as e:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
+
+# ==========================
 # FORECAST API
 # ==========================
 @router.post("/generateforecast")
-async def generate_forecast(req: ForecastRequest):
+async def generate_forecast(req: ForecastRequest, request: Request):
     try:
+        # Get authenticated user
+        try:
+            user_id = get_user_id_from_request(request)
+            response = (
+                supabase.table("sales_data")
+                .select("*")
+                .eq("user_id", user_id)  # Filter by user
+                .order("id", desc=True)
+                .limit(1)
+                .execute()
+            )
+        except:
+            # Fallback: get latest data without user filter
+            response = (
+                supabase.table("sales_data")
+                .select("*")
+                .order("id", desc=True)
+                .limit(1)
+                .execute()
+            )
+        
         column = req.column
         horizon = req.horizon
-
-        # ==========================
-        # FETCH DATA FROM SUPABASE
-        # ==========================
-        response = (
-            supabase.table("sales_data")
-            .select("*")
-            .order("id", desc=True)
-            .limit(1)
-            .execute()
-        )
 
         if not response.data:
             raise HTTPException(status_code=400, detail="No data available in Supabase")
@@ -204,9 +237,103 @@ async def generate_forecast(req: ForecastRequest):
             response_payload["is_grouped"] = True
             response_payload["groups"] = groups_dict
 
+        # ==========================
+        # SAVE FORECAST TO DATABASE
+        # ==========================
+        forecast_record = {
+            "user_id": user_id,
+            "column": column,
+            "horizon": horizon,
+            "model": req.model,
+            "forecast_data": response_payload,
+            "created_at": datetime.utcnow().isoformat(),
+        }
+        
+        try:
+            supabase.table("forecasts").insert(forecast_record).execute()
+        except Exception as db_err:
+            # Log but don't fail the forecast if saving to DB fails
+            print(f"Warning: Could not save forecast to database: {db_err}")
+
         return response_payload
 
     except Exception as e:
         import traceback
         print(traceback.format_exc())
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ==========================
+# GET USER FORECASTS
+# ==========================
+@router.get("/forecasts")
+async def get_user_forecasts(request: Request):
+    try:
+        user_id = get_user_id_from_request(request)
+        
+        response = (
+            supabase.table("forecasts")
+            .select("*")
+            .eq("user_id", user_id)
+            .order("created_at", desc=True)
+            .execute()
+        )
+        
+        return {"forecasts": response.data}
+    
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ==========================
+# GET SINGLE FORECAST
+# ==========================
+@router.get("/forecasts/{forecast_id}")
+async def get_forecast(forecast_id: str, request: Request):
+    try:
+        user_id = get_user_id_from_request(request)
+        
+        response = (
+            supabase.table("forecasts")
+            .select("*")
+            .eq("id", forecast_id)
+            .eq("user_id", user_id)
+            .single()
+            .execute()
+        )
+        
+        if not response.data:
+            raise HTTPException(status_code=404, detail="Forecast not found")
+        
+        return {"forecast": response.data}
+    
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ==========================
+# DELETE FORECAST
+# ==========================
+@router.delete("/forecasts/{forecast_id}")
+async def delete_forecast(forecast_id: str, request: Request):
+    try:
+        user_id = get_user_id_from_request(request)
+        
+        # Verify ownership before deleting
+        forecast = (
+            supabase.table("forecasts")
+            .select("user_id")
+            .eq("id", forecast_id)
+            .single()
+            .execute()
+        )
+        
+        if not forecast.data or forecast.data["user_id"] != user_id:
+            raise HTTPException(status_code=403, detail="Unauthorized to delete this forecast")
+        
+        supabase.table("forecasts").delete().eq("id", forecast_id).execute()
+        
+        return {"message": "Forecast deleted successfully"}
+    
+    except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

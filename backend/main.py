@@ -3,8 +3,12 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
+import os
+from dotenv import load_dotenv
 
-from api.routes import sales, forecasts
+from api.routes import sales, forecasts, auth
+
+load_dotenv()
 
 
 # ==========================
@@ -22,10 +26,21 @@ app = FastAPI(
 # ==========================
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],   # ⚠ Change to frontend URL in production
+    allow_origins=[
+        "http://localhost:5000",
+        "http://localhost:5001", 
+        "http://localhost:5002",
+        "http://localhost:5173",
+        "http://127.0.0.1:5000",
+        "http://127.0.0.1:5001",
+        "http://127.0.0.1:5002",
+        "http://127.0.0.1:5173",
+        "*"
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["*"],
 )
 
 
@@ -45,8 +60,22 @@ async def disable_cache(request: Request, call_next):
 
 
 # ==========================
+# TOKEN EXTRACTION MIDDLEWARE
+# ==========================
+@app.middleware("http")
+async def add_user_token(request: Request, call_next):
+    """Extract and attach authorization token to request state"""
+    auth_header = request.headers.get("Authorization", "")
+    token = auth_header.replace("Bearer ", "") if auth_header else None
+    request.state.token = token
+    response = await call_next(request)
+    return response
+
+
+# ==========================
 # REGISTER API ROUTES
 # ==========================
+app.include_router(auth.router, prefix="/api", tags=["Auth"])
 app.include_router(sales.router, prefix="/api", tags=["Sales"])
 app.include_router(forecasts.router, prefix="/api", tags=["Forecasts"])
 
@@ -83,5 +112,5 @@ if __name__ == "__main__":
         "main:app",
         host="0.0.0.0",
         port=8000,
-        reload=True  # auto-reload in development
+        reload=False  # Disabled for Windows compatibility
     )
