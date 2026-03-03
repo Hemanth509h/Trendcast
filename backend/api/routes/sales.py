@@ -1,104 +1,124 @@
 import os
-import json
 import pandas as pd
 import io
-import time
 from fastapi import APIRouter, UploadFile, File, HTTPException, Response
+from supabase import create_client, Client
 
 router = APIRouter()
 
-DATA_FILE = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "data.json")
+# Supabase Credentials
+SUPABASE_URL = "https://coztxkaoyxphgvoulbel.supabase.co"
+SUPABASE_KEY = "sb_publishable_9gj0hwRnm6zbte_e_gH04w_GjPJ8lTi"
 
+supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+
+
+# ================== UPLOAD ==================
 @router.post("/upload")
 async def upload_file(file: UploadFile = File(...)):
     if not file.filename:
         raise HTTPException(status_code=400, detail="No selected file")
-    
+
     contents = await file.read()
+
     if file.filename.endswith('.csv'):
         df = pd.read_csv(io.BytesIO(contents))
     elif file.filename.endswith('.xlsx'):
         df = pd.read_excel(io.BytesIO(contents))
     else:
-        raise HTTPException(status_code=400, detail="Invalid file type. Use CSV or Excel.")
-    
-    data = df.to_dict(orient='records')
-    try:
-        with open(DATA_FILE, 'w') as f:
-            json.dump({"data": data,
-                       "filename": file.filename,
-                        "record_count": len(data)}, f)
-            f.flush()
-            os.fsync(f.fileno())
-        return {"message": "File uploaded and data stored successfully" }
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to store data: {str(e)}")
+        raise HTTPException(status_code=400, detail="Invalid file type")
 
+    data = df.to_dict(orient="records")
+
+    response = supabase.table("sales_data").insert({
+        "data": data,
+        "filename": file.filename,
+        "record_count": len(data)
+    }).execute()
+
+    if response.data is None:
+        raise HTTPException(status_code=500, detail="Insert failed")
+
+    return {"message": "File uploaded to Supabase successfully"}
+
+
+# ================== GET SALES DATA ==================
 @router.get("/salesdata")
 async def get_sales_data():
-    if not os.path.exists(DATA_FILE):
-        raise HTTPException(status_code=404, detail="Data file not found")
-    with open(DATA_FILE, 'r') as f:
-        data = json.load(f)
-    return data
+    response = supabase.table("sales_data").select("*").order("id", desc=True).limit(1).execute()
 
+    if not response.data:
+        raise HTTPException(status_code=404, detail="No data found")
+
+    return response.data[0]
+
+
+# ================== DELETE ALL ==================
 @router.get("/delete")
 async def delete_data():
-    try:
-        with open(DATA_FILE, "w") as f:
-            json.dump({"data": []}, f, indent=4)
-        return {"message": "Deleted successfully", "type": "success"}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    response = supabase.table("sales_data").delete().neq("id", 0).execute()
 
+    return {"message": "Deleted successfully", "type": "success"}
+
+
+# ================== ADD RECORD ==================
 @router.post("/addrecord")
 async def add_record(record: dict):
-    if not os.path.exists(DATA_FILE):
-        raise HTTPException(status_code=404, detail="Data file not found")
-    
-    with open(DATA_FILE, 'r') as f:
-        data = json.load(f)
-    
-    if 'data' not in data:
-        data['data'] = []
-    data['data'].append(record)
-    
-    with open(DATA_FILE, 'w') as f:
-        json.dump(data, f)
-    
+    # Get latest dataset
+    response = supabase.table("sales_data").select("*").order("id", desc=True).limit(1).execute()
+
+    if not response.data:
+        raise HTTPException(status_code=404, detail="No data found")
+
+    latest = response.data[0]
+    updated_data = latest["data"]
+    updated_data.append(record)
+
+    # Update record
+    supabase.table("sales_data").update({
+        "data": updated_data,
+        "record_count": len(updated_data)
+    }).eq("id", latest["id"]).execute()
+
     return {"message": "Record added successfully"}
 
+
+# ================== DELETE RECORD ==================
 @router.post("/deleterecord")
 async def delete_record(request_data: dict):
     record_to_delete = request_data.get("record")
-    if not os.path.exists(DATA_FILE):
-        raise HTTPException(status_code=404, detail="Data file not found")
-    
-    with open(DATA_FILE, 'r') as f:
-        data = json.load(f)
-    
-    data['data'] = [record for record in data['data'] if record != record_to_delete]
-    
-    with open(DATA_FILE, 'w') as f:
-        json.dump(data, f)
-    
+
+    response = supabase.table("sales_data").select("*").order("id", desc=True).limit(1).execute()
+
+    if not response.data:
+        raise HTTPException(status_code=404, detail="No data found")
+
+    latest = response.data[0]
+    updated_data = [r for r in latest["data"] if r != record_to_delete]
+
+    supabase.table("sales_data").update({
+        "data": updated_data,
+        "record_count": len(updated_data)
+    }).eq("id", latest["id"]).execute()
+
     return {"message": "Record deleted successfully"}
 
+
+# ================== EXPORT ==================
 @router.get("/export")
 async def export_data():
-    if not os.path.exists(DATA_FILE):
-        raise HTTPException(status_code=404, detail="Data file not found")
-    
-    with open(DATA_FILE, 'r') as f:
-        data = json.load(f)
-    
-    df = pd.DataFrame(data['data'])
+    response = supabase.table("sales_data").select("*").order("id", desc=True).limit(1).execute()
+
+    if not response.data:
+        raise HTTPException(status_code=404, detail="No data found")
+
+    df = pd.DataFrame(response.data[0]["data"])
+
     output = io.StringIO()
     df.to_csv(output, index=False)
-    csv_data = output.getvalue()
-    
+
     return Response(
-        content=csv_data,
+        content=output.getvalue(),
         media_type="text/csv",
-        headers={"Content-Disposition": "attachment;filename=sales_data.csv"}
+        headers={"Content-Disposition": "attachment; filename=sales_data.csv"}
     )
