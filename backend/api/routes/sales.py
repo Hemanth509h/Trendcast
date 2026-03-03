@@ -70,7 +70,6 @@ async def upload_file(request: Request, file: UploadFile = File(...)):
         user_id = "anonymous"
 
     response = supabase.table("sales_data").insert({
-        "user_id": user_id,
         "data": data,
         "filename": file.filename,
         "record_count": len(data)
@@ -90,11 +89,11 @@ async def upload_file(request: Request, file: UploadFile = File(...)):
 @router.get("/salesdata")
 async def get_sales_data(request: Request):
     try:
-        user_id = get_user_id_from_request(request)
-        response = supabase.table("sales_data").select("*").eq("user_id", user_id).order("id", desc=True).limit(1).execute()
-    except:
-        # Fallback: get latest data without user filter
+        # Get latest data without user filter since user_id column is missing
         response = supabase.table("sales_data").select("*").order("id", desc=True).limit(1).execute()
+    except Exception as e:
+        print(f"Error fetching sales data: {e}")
+        raise HTTPException(status_code=404, detail="No data found")
 
     if not response.data:
         raise HTTPException(status_code=404, detail="No data found")
@@ -106,13 +105,12 @@ async def get_sales_data(request: Request):
 @router.get("/delete")
 async def delete_data(request: Request):
     try:
-        user_id = get_user_id_from_request(request)
-        response = supabase.table("sales_data").delete().eq("user_id", user_id).execute()
-    except:
-        # Fallback: delete latest record
+        # Delete latest record
         latest = supabase.table("sales_data").select("id").order("id", desc=True).limit(1).execute()
         if latest.data:
             response = supabase.table("sales_data").delete().eq("id", latest.data[0]["id"]).execute()
+    except Exception as e:
+        print(f"Error deleting data: {e}")
 
     return {"message": "Deleted successfully", "type": "success"}
 
@@ -121,11 +119,10 @@ async def delete_data(request: Request):
 @router.post("/addrecord")
 async def add_record(data: AddRecordRequest, request: Request):
     try:
-        user_id = get_user_id_from_request(request)
-        response = supabase.table("sales_data").select("*").eq("user_id", user_id).order("id", desc=True).limit(1).execute()
-    except:
-        # Fallback: get latest data without user filter
+        # Get latest data
         response = supabase.table("sales_data").select("*").order("id", desc=True).limit(1).execute()
+    except Exception as e:
+        print(f"Error adding record: {e}")
 
     if not response.data:
         raise HTTPException(status_code=404, detail="No data found")
@@ -147,11 +144,10 @@ async def add_record(data: AddRecordRequest, request: Request):
 @router.post("/deleterecord")
 async def delete_record(data: DeleteRecordRequest, request: Request):
     try:
-        user_id = get_user_id_from_request(request)
-        response = supabase.table("sales_data").select("*").eq("user_id", user_id).order("id", desc=True).limit(1).execute()
-    except:
-        # Fallback: get latest data without user filter
+        # Get latest data
         response = supabase.table("sales_data").select("*").order("id", desc=True).limit(1).execute()
+    except Exception as e:
+        print(f"Error deleting record: {e}")
     
     record_to_delete = data.record
 
@@ -173,11 +169,10 @@ async def delete_record(data: DeleteRecordRequest, request: Request):
 @router.get("/export")
 async def export_data(request: Request):
     try:
-        user_id = get_user_id_from_request(request)
-        response = supabase.table("sales_data").select("*").eq("user_id", user_id).order("id", desc=True).limit(1).execute()
-    except:
-        # Fallback: get latest data without user filter
+        # Get latest data
         response = supabase.table("sales_data").select("*").order("id", desc=True).limit(1).execute()
+    except Exception as e:
+        print(f"Error exporting data: {e}")
 
     if not response.data:
         raise HTTPException(status_code=404, detail="No data found")

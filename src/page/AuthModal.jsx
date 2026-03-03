@@ -10,7 +10,7 @@ import "./auth-modal.css";
 
 const AuthContext = createContext();
 
-const API_BASE_URL = "http://localhost:8000";
+const API_BASE_URL = "";
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);

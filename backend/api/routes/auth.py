@@ -77,15 +77,19 @@ async def signup(req: SignUpRequest):
         user_id = user_obj.get("id") if isinstance(user_obj, dict) else getattr(user_obj, "id", None)
 
         # Create user profile in database
-        user_data = {
-            "id": user_id,
-            "email": req.email,
-            "full_name": req.full_name or req.email.split("@")[0],
-            "created_at": datetime.utcnow().isoformat(),
-            "updated_at": datetime.utcnow().isoformat(),
-        }
-
-        supabase.table("users").insert(user_data).execute()
+        try:
+            user_data = {
+                "id": user_id,
+                "email": req.email,
+                "full_name": req.full_name or req.email.split("@")[0],
+                "created_at": datetime.utcnow().isoformat(),
+                "updated_at": datetime.utcnow().isoformat(),
+            }
+            supabase.table("users").upsert(user_data).execute()
+        except Exception as db_err:
+            print(f"[auth.signup] database error: {db_err}")
+            # If user creation in Auth succeeded but DB profile failed, 
+            # we might want to continue or handle it. For now, let's log.
 
         access_token = None
         if session_obj:

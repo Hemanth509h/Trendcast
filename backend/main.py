@@ -26,17 +26,7 @@ app = FastAPI(
 # ==========================
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5000",
-        "http://localhost:5001", 
-        "http://localhost:5002",
-        "http://localhost:5173",
-        "http://127.0.0.1:5000",
-        "http://127.0.0.1:5001",
-        "http://127.0.0.1:5002",
-        "http://127.0.0.1:5173",
-        "*"
-    ],
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -86,7 +76,6 @@ app.include_router(forecasts.router, prefix="/api", tags=["Forecasts"])
 dist_dir = Path(__file__).parent.parent / "dist"
 
 if dist_dir.exists():
-
     # Serve static assets
     assets_path = dist_dir / "assets"
     if assets_path.exists():
@@ -96,10 +85,8 @@ if dist_dir.exists():
     @app.get("/{full_path:path}")
     async def serve_spa(full_path: str):
         file_path = dist_dir / full_path
-
         if file_path.is_file():
             return FileResponse(str(file_path))
-
         return FileResponse(str(dist_dir / "index.html"))
 
 
@@ -112,5 +99,5 @@ if __name__ == "__main__":
         "main:app",
         host="0.0.0.0",
         port=8000,
-        reload=False  # Disabled for Windows compatibility
+        reload=False
     )
