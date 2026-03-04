@@ -21,15 +21,12 @@ function Router() {
     }
   }, [location, isAuthenticated]);
 
-  if (loading) {
+  if (loading && false) {
     return <div className="loading-container">Loading...</div>;
   }
 
   return (
     <>
-      {!isAuthenticated && (
-        <AuthModal isOpen={true} onClose={() => {}} />
-      )}
       <Switch>
         <Route path="/">
           <div className="app-container">
