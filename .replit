@@ -1,10 +1,10 @@
-modules = ["python-3.11", "nodejs-20"]
+modules = ["nodejs-20", "web", "python-3.11"]
 [agent]
 expertMode = true
 
 [nix]
 channel = "stable-25_05"
-packages = ["cairo", "cargo", "ffmpeg-full", "freetype", "ghostscript", "glibcLocales", "gobject-introspection", "gtk3", "libiconv", "libxcrypt", "pkg-config", "qhull", "rustc", "tcl", "tk", "xsimd"]
+packages = ["cairo", "cargo", "ffmpeg-full", "freetype", "ghostscript", "glibcLocales", "gobject-introspection", "gtk3", "libiconv", "libxcrypt", "openssl", "pkg-config", "postgresql", "qhull", "rustc", "tcl", "tk", "xsimd"]
 
 [workflows]
 runButton = "Project"
@@ -56,5 +56,5 @@ externalPort = 8000
 
 [deployment]
 deploymentTarget = "autoscale"
-run = ["gunicorn", "--bind=0.0.0.0:8000", "--reuse-port", "-k", "uvicorn.workers.UvicornWorker", "backend.main:app"]
+run = ["gunicorn", "--bind", "0.0.0.0:5000", "main:app"]
 build = ["npm", "run", "build"]

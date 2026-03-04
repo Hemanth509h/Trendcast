@@ -15,8 +15,9 @@ import { useAuth } from "../page/AuthModal";
 import "./ui.css";
 
 const path = [
-  { lable: "Sales Data", icon: TableProperties, href: "/Sales" },
-  { lable: "Forecasts", icon: TrendingUp, href: "/Forecasts" }
+  { label: "Dashboard", icon: LayoutDashboard, href: "/" },
+  { label: "Sales Data", icon: TableProperties, href: "/Sales" },
+  { label: "Forecasts", icon: TrendingUp, href: "/Forecasts" }
 ];
 
 export function Sidebar() {
@@ -53,7 +54,7 @@ export function Sidebar() {
                 <item.icon
                   className={`menu-icon ${isActive ? "menu-icon-active" : ""}`}
                 />
-                <span>{item.lable}</span>
+                <span>{item.label}</span>
               </Link>
             );
           })}
@@ -69,22 +70,24 @@ export function Sidebar() {
         </div>
         
         {/* User Section */}
-        <div className="sidebar-user">
-          <hr style={{ margin: "10px 0" }} />
-          <div className="user-info">
-            <div className="user-avatar">
-              <User size={18} />
+        {user && (
+          <div className="sidebar-user">
+            <hr style={{ margin: "10px 0" }} />
+            <div className="user-info">
+              <div className="user-avatar">
+                <User size={18} />
+              </div>
+              <div className="user-details">
+                <p className="user-name">{user?.full_name || user?.email}</p>
+                <p className="user-email">{user?.email}</p>
+              </div>
             </div>
-            <div className="user-details">
-              <p className="user-name">{user?.full_name || user?.email}</p>
-              <p className="user-email">{user?.email}</p>
-            </div>
+            <button className="logout-button" onClick={handleLogout}>
+              <LogOut size={18} />
+              <span>Logout</span>
+            </button>
           </div>
-          <button className="logout-button" onClick={handleLogout}>
-            <LogOut size={18} />
-            <span>Logout</span>
-          </button>
-        </div>
+        )}
       </aside>
     </>
   );

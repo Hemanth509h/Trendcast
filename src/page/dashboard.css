@@ -1,0 +1,128 @@
+.dashboard-content {
+  padding: 2rem;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.dashboard-header {
+  margin-bottom: 2rem;
+}
+
+.dashboard-header h1 {
+  font-size: 1.875rem;
+  font-weight: 700;
+  color: #111827;
+  margin-bottom: 0.5rem;
+}
+
+.dashboard-header p {
+  color: #6b7280;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.stat-card {
+  background: white;
+  padding: 1.5rem;
+  border-radius: 0.75rem;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.stat-icon {
+  padding: 0.75rem;
+  border-radius: 0.5rem;
+}
+
+.stat-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.stat-label {
+  font-size: 0.875rem;
+  color: #6b7280;
+  margin-bottom: 0.25rem;
+}
+
+.stat-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #111827;
+  margin-bottom: 0.25rem;
+}
+
+.stat-trend {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.stat-trend.positive {
+  color: #059669;
+}
+
+.stat-trend.negative {
+  color: #dc2626;
+}
+
+.dashboard-charts {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.5rem;
+}
+
+.chart-container {
+  background: white;
+  padding: 1.5rem;
+  border-radius: 0.75rem;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+  height: 400px;
+}
+
+.chart-container h3 {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #111827;
+  margin-bottom: 1.5rem;
+}
+
+.no-data {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #9ca3af;
+  font-style: italic;
+}
+
+/* Utility classes if tailwind is not fully configured */
+.flex { display: flex; }
+.items-center { align-items: center; }
+.justify-center { justify-content: center; }
+.h-full { height: 100%; }
+.bg-blue-100 { background-color: #dbeafe; }
+.text-blue-600 { color: #2563eb; }
+.bg-green-100 { background-color: #dcfce7; }
+.text-green-600 { color: #16a34a; }
+.bg-purple-100 { background-color: #f3e8ff; }
+.text-purple-600 { color: #9333ea; }
+.bg-indigo-100 { background-color: #e0e7ff; }
+.text-indigo-600 { color: #4f46e5; }
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}

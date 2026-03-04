@@ -36,6 +36,8 @@ export const AuthProvider = ({ children }) => {
           } else {
             localStorage.removeItem("authToken");
             localStorage.removeItem("user");
+            setToken(null);
+            setUser(null);
           }
         }
       } catch (err) {
@@ -64,6 +66,7 @@ export const AuthProvider = ({ children }) => {
       setUser(data.user);
       localStorage.setItem("authToken", data.access_token);
       localStorage.setItem("user", JSON.stringify(data.user));
+      window.location.reload();
       return { success: true };
     } catch (err) {
       setError(err.message || "Error during signup");
@@ -87,6 +90,7 @@ export const AuthProvider = ({ children }) => {
       setUser(data.user);
       localStorage.setItem("authToken", data.access_token);
       localStorage.setItem("user", JSON.stringify(data.user));
+      window.location.reload();
       return { success: true };
     } catch (err) {
       setError(err.message || "Error during login");
@@ -108,6 +112,7 @@ export const AuthProvider = ({ children }) => {
     setToken(null);
     localStorage.removeItem("authToken");
     localStorage.removeItem("user");
+    window.location.reload();
   };
 
   const getToken = () => token;

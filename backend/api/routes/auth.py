@@ -157,11 +157,18 @@ async def login(req: LoginRequest):
                 user_profile = user_profile[0] if isinstance(user_profile, list) and user_profile else None
 
         if not user_profile:
-            user_profile = {
-                "id": user_id,
-                "email": req.email,
-                "full_name": req.email.split("@")[0],
-            }
+            # Fallback to creating a profile if missing
+            try:
+                user_profile = {
+                    "id": user_id,
+                    "email": req.email,
+                    "full_name": req.email.split("@")[0],
+                    "created_at": datetime.utcnow().isoformat(),
+                    "updated_at": datetime.utcnow().isoformat(),
+                }
+                supabase.table("users").upsert(user_profile).execute()
+            except:
+                pass
 
         access_token = None
         if session_obj:
@@ -179,7 +186,7 @@ async def login(req: LoginRequest):
 # LOGOUT ENDPOINT
 # ==========================
 @router.post("/auth/logout")
-async def logout(token: str):
+async def logout(request: Request):
     try:
         # Revoke session (optional - mainly client-side)
         return {"message": "Logged out successfully"}
@@ -197,6 +204,12 @@ async def logout(token: str):
 async def get_current_user(request: Request):
     try:
         token = getattr(request.state, "token", None)
+        if not token:
+            # Fallback to header if state not populated by middleware
+            auth_header = request.headers.get("Authorization")
+            if auth_header and auth_header.startswith("Bearer "):
+                token = auth_header.split(" ")[1]
+        
         if not token:
             raise HTTPException(status_code=401, detail="No token provided")
 
@@ -226,7 +239,14 @@ async def get_current_user(request: Request):
         user_response = supabase.table("users").select("*").eq("id", user_id).execute()
 
         if not user_response.data:
-            raise HTTPException(status_code=404, detail="User not found")
+            # Return user data from Supabase Auth if profile is missing
+            return {
+                "user": {
+                    "id": user_id,
+                    "email": user_obj.get("email") if isinstance(user_obj, dict) else getattr(user_obj, "email", None),
+                    "full_name": (user_obj.get("user_metadata") or {}).get("full_name") if isinstance(user_obj, dict) else getattr(user_obj, "user_metadata", {}).get("full_name")
+                }
+            }
 
         return {"user": user_response.data[0]}
 
@@ -244,13 +264,25 @@ async def get_current_user_id(request: Request) -> str:
     """Dependency to inject user_id into protected routes"""
     token = getattr(request.state, "token", None)
     if not token:
+        auth_header = request.headers.get("Authorization")
+        if auth_header and auth_header.startswith("Bearer "):
+            token = auth_header.split(" ")[1]
+
+    if not token:
         raise HTTPException(status_code=401, detail="No token provided")
 
     try:
-        user = supabase.auth.get_user(token)
-        if not user:
+        user_resp = supabase.auth.get_user(token)
+        user_id = None
+        if isinstance(user_resp, dict):
+            data = user_resp.get("data")
+            user_id = data.get("user", {}).get("id") if data else None
+        else:
+            user_id = user_resp.user.id
+            
+        if not user_id:
             raise HTTPException(status_code=401, detail="Invalid token")
-        return user.user.id
+        return user_id
     except Exception as e:
         print(f"[get_current_user_id] exception: {repr(e)}")
         raise HTTPException(status_code=401, detail="Unauthorized")

@@ -25,10 +25,13 @@ export const apiCall = async (endpoint, options = {}) => {
 
     if (!response.ok) {
       if (response.status === 401) {
-        // Unauthorized - redirect to login
+        // Unauthorized - clear token
         localStorage.removeItem("authToken");
         localStorage.removeItem("user");
-        window.location.href = "/Login";
+        // Only redirect if not on root to avoid loops
+        if (window.location.pathname !== "/") {
+          window.location.href = "/";
+        }
       }
       const errorData = await response.json();
       throw new Error(errorData.detail || `API Error: ${response.statusText}`);

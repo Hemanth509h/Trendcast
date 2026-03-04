@@ -60,6 +60,7 @@ export default function Salesdata() {
         headers,
         body,
       });
+      clearTimeout(timeoutId);
       const result = await response.json();
 
       if (!response.ok) {
@@ -92,6 +93,7 @@ export default function Salesdata() {
         method: "GET",
         headers,
       });
+      clearTimeout(timeoutId);
       const result = await response.json();
 
       if (!response.ok) {
@@ -116,14 +118,6 @@ export default function Salesdata() {
       setDataloading(true);
       const token = localStorage.getItem("authToken");
       const headers = token ? { Authorization: `Bearer ${token}` } : {};
-      const response = await fetch(getApiUrl("/api/salesdata"), {
-        method: "GET",
-        headers,
-      });
-      const result = await response.json();
-      if (!response.ok) {
-        throw new Error(result.error);
-      }
       setsalesdata(result.data);
       if (result.filename) {
         setimportedfilename(result.filename);
@@ -158,6 +152,7 @@ export default function Salesdata() {
         headers,
         body: JSON.stringify(formData),
       });
+      clearTimeout(timeoutId);
       const result = await response.json();
       if (!response.ok) {
         throw new Error(result.error);
@@ -185,6 +180,7 @@ export default function Salesdata() {
         headers,
         body: JSON.stringify({ record }),
       });
+      clearTimeout(timeoutId);
       const result = await response.json();
       if (!response.ok) {
         throw new Error(result.error);

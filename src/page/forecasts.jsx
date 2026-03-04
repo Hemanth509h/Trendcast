@@ -104,10 +104,21 @@ export default function Forecasts() {
         method: "GET",
         headers,
       });
-        const result = await response.json();
+      const result = await response.json();
       if (!response.ok) throw new Error(result.error);
-      setsalesdata(result.data);
-      sessionStorage.setItem("salesdata", JSON.stringify(result.data));
+      
+      const data = result.data;
+      if (data && data.length > 0) {
+        const sortedData = [...data].sort((a, b) => new Date(a.date || a.Date) - new Date(b.date || b.Date));
+        setsalesdata(sortedData);
+        sessionStorage.setItem("salesdata", JSON.stringify(sortedData));
+        
+        if (!selectedColumn) {
+          const keys = Object.keys(sortedData[0]);
+          const defaultCol = keys.find(k => k.toLowerCase() === 'weekly_sales') || keys[0];
+          setSelectedColumn(defaultCol);
+        }
+      }
     } catch (error) {
       toast(error.message, "error");
     }
@@ -625,7 +636,7 @@ export default function Forecasts() {
                     />
                   </div>
                   <span className="metric-value">
-                    ${metrics.mae?.toFixed(2) || "N/A"}
+                    ₹{metrics.mae?.toFixed(2) || "N/A"}
                   </span>
                 </div>
               </div>
@@ -646,7 +657,7 @@ export default function Forecasts() {
                     />
                   </div>
                   <span className="metric-value">
-                    ${metrics.rmse?.toFixed(2) || "N/A"}
+                    ₹{metrics.rmse?.toFixed(2) || "N/A"}
                   </span>
                 </div>
               </div>
@@ -667,8 +678,10 @@ export default function Forecasts() {
                     />
                   </div>
                   <span className="metric-value">
-                    {metrics.accuracy != null && metrics.accuracy > 0
+                    {metrics.accuracy != null 
                       ? `${metrics.accuracy.toFixed(2)}%`
+                      : metrics.r2 != null
+                      ? `${(metrics.r2 * 100).toFixed(2)}%`
                       : "N/A"}
                   </span>
                 </div>
