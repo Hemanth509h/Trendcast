@@ -66,14 +66,19 @@ async def upload_file(request: Request, file: UploadFile = File(...)):
 
     try:
         user_id = get_user_id_from_request(request)
+        response = supabase.table("sales_data").insert({
+            "data": data,
+            "filename": file.filename,
+            "record_count": len(data),
+            "user_id": user_id
+        }).execute()
     except:
-        user_id = "anonymous"
-
-    response = supabase.table("sales_data").insert({
-        "data": data,
-        "filename": file.filename,
-        "record_count": len(data)
-    }).execute()
+        # Fallback for development if auth isn't fully set up
+        response = supabase.table("sales_data").insert({
+            "data": data,
+            "filename": file.filename,
+            "record_count": len(data)
+        }).execute()
 
     if response.data is None:
         raise HTTPException(status_code=500, detail="Insert failed")
@@ -89,11 +94,22 @@ async def upload_file(request: Request, file: UploadFile = File(...)):
 @router.get("/salesdata")
 async def get_sales_data(request: Request):
     try:
-        # Get latest data without user filter since user_id column is missing
-        response = supabase.table("sales_data").select("*").order("id", desc=True).limit(1).execute()
+        user_id = get_user_id_from_request(request)
+        # Fetch latest data for this specific user
+        response = supabase.table("sales_data") \
+            .select("*") \
+            .eq("user_id", user_id) \
+            .order("id", desc=True) \
+            .limit(1) \
+            .execute()
     except Exception as e:
-        print(f"Error fetching sales data: {e}")
-        raise HTTPException(status_code=404, detail="No data found")
+        # Fallback to general latest if user-specific fails or isn't set up
+        print(f"Error fetching user sales data: {e}")
+        try:
+            response = supabase.table("sales_data").select("*").order("id", desc=True).limit(1).execute()
+        except Exception as e2:
+            print(f"Total failure: {e2}")
+            raise HTTPException(status_code=404, detail="No data found")
 
     if not response.data:
         raise HTTPException(status_code=404, detail="No data found")

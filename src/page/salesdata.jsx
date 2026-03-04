@@ -60,7 +60,6 @@ export default function Salesdata() {
         headers,
         body,
       });
-      clearTimeout(timeoutId);
       const result = await response.json();
 
       if (!response.ok) {
@@ -93,7 +92,6 @@ export default function Salesdata() {
         method: "GET",
         headers,
       });
-      clearTimeout(timeoutId);
       const result = await response.json();
 
       if (!response.ok) {
@@ -118,7 +116,17 @@ export default function Salesdata() {
       setDataloading(true);
       const token = localStorage.getItem("authToken");
       const headers = token ? { Authorization: `Bearer ${token}` } : {};
-      setsalesdata(result.data);
+      const response = await fetch(getApiUrl("/api/salesdata"), {
+        method: "GET",
+        headers,
+      });
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.detail || "Failed to fetch data");
+      }
+
+      setsalesdata(result.data || []);
       if (result.filename) {
         setimportedfilename(result.filename);
         sessionStorage.setItem("sales_filename", result.filename);
@@ -128,13 +136,12 @@ export default function Salesdata() {
         sessionStorage.setItem("sales_recordcount", result.record_count);
       }
       // Store in sessionStorage
-      sessionStorage.setItem("salesdata", JSON.stringify(result.data));
-      setDataloading(false);
+      sessionStorage.setItem("salesdata", JSON.stringify(result.data || []));
       toast("Data Synchronized", "success");
     } catch (error) {
+      console.error("Fetch error:", error);
       toast(error.message, "error");
-    }
-    finally {
+    } finally {
       setDataloading(false);
     }
   };
@@ -152,7 +159,6 @@ export default function Salesdata() {
         headers,
         body: JSON.stringify(formData),
       });
-      clearTimeout(timeoutId);
       const result = await response.json();
       if (!response.ok) {
         throw new Error(result.error);
@@ -180,7 +186,6 @@ export default function Salesdata() {
         headers,
         body: JSON.stringify({ record }),
       });
-      clearTimeout(timeoutId);
       const result = await response.json();
       if (!response.ok) {
         throw new Error(result.error);
