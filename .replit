@@ -5,7 +5,7 @@ integrations = ["python_openai_ai_integrations:1.0.0", "python_gemini_ai_integra
 
 [nix]
 channel = "stable-25_05"
-packages = ["cairo", "ffmpeg-full", "freetype", "ghostscript", "glibcLocales", "gobject-introspection", "gtk3", "openssl", "pkg-config", "postgresql", "qhull", "tcl", "tk"]
+packages = ["cairo", "cargo", "ffmpeg-full", "freetype", "ghostscript", "glibcLocales", "gobject-introspection", "gtk3", "libiconv", "libxcrypt", "openssl", "pkg-config", "postgresql", "qhull", "rustc", "tcl", "tk", "xsimd"]
 
 [workflows]
 runButton = "Project"
@@ -21,10 +21,6 @@ args = "Backend API"
 
 [[workflows.workflow.tasks]]
 task = "workflow.run"
-args = "Frontend Server"
-
-[[workflows.workflow.tasks]]
-task = "workflow.run"
 args = "Start application"
 
 [[workflows.workflow]]
@@ -36,20 +32,8 @@ outputType = "console"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "cd backend && PYTHONPATH=$PYTHONPATH:. python3 -m uvicorn main:app --host 0.0.0.0 --port 8000 --reload"
+args = "python backend/main.py"
 waitForPort = 8000
-
-[[workflows.workflow]]
-name = "Frontend Server"
-author = "agent"
-
-[workflows.workflow.metadata]
-outputType = "webview"
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "npm run dev -- --host 0.0.0.0 --port 5000"
-waitForPort = 5000
 
 [[workflows.workflow]]
 name = "Start application"
@@ -57,16 +41,15 @@ author = "agent"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "gunicorn --bind 0.0.0.0:5000 --reuse-port --reload main:app"
+args = "npm run dev"
 waitForPort = 5000
+
+[workflows.workflow.metadata]
+outputType = "webview"
 
 [[ports]]
 localPort = 5000
 externalPort = 80
-
-[[ports]]
-localPort = 8000
-externalPort = 8000
 
 [deployment]
 deploymentTarget = "autoscale"
