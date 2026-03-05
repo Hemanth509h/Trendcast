@@ -654,7 +654,7 @@ export default function Forecasts() {
                     />
                   </div>
                   <span className="metric-value">
-                    {metrics.accuracy != null && metrics.accuracy > 0
+                    {metrics.accuracy != null
                       ? `${metrics.accuracy.toFixed(2)}%`
                       : "N/A"}
                   </span>

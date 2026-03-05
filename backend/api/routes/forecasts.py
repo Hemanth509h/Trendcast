@@ -71,22 +71,27 @@ async def generate_forecast(req: ForecastRequest):
             return fcst, hist_pred
 
         def compute_metrics(series_obj, hist_pred):
-            m = mean_absolute_error(series_obj, hist_pred)
-            mse_val = mean_squared_error(series_obj, hist_pred)
-            r2_val = r2_score(series_obj, hist_pred)
+            actual = np.array(series_obj)
+            pred = np.array(hist_pred)
+            mae_val = mean_absolute_error(actual, pred)
+            mse_val = mean_squared_error(actual, pred)
+            r2_val = r2_score(actual, pred)
+            mask = actual != 0
+            if np.any(mask):
+                mape = np.mean(np.abs((actual[mask] - pred[mask]) / actual[mask]))
+                accuracy = max(0, min(100, (1 - mape) * 100))
+            else:
+                accuracy = 0
             return {
-                "mae": float(m),
+                "mae": float(mae_val),
                 "mse": float(mse_val),
                 "r2": float(r2_val),
                 "rmse": float(np.sqrt(mse_val)),
-                "accuracy": float(max(0, min(100, r2_val * 100)))
+                "accuracy": float(accuracy)
             }
 
-        # SARIMA forecast for entire dataset (used for metrics and default behavior)
         full_forecast, full_hist_pred = forecast_series(series, horizon)
-        mae = mean_absolute_error(series, full_hist_pred)
-        mse = mean_squared_error(series, full_hist_pred)
-        r2 = r2_score(series, full_hist_pred)
+        metrics_dict = compute_metrics(series, full_hist_pred)
 
         response_payload = {
             "forecast": [max(0, float(v)) for v in full_forecast.tolist()],
@@ -96,14 +101,8 @@ async def generate_forecast(req: ForecastRequest):
                 "values": series.values.tolist(),
                 "trend": full_hist_pred.tolist()
             },
-            "metrics": {
-                "mae": float(mae),
-                "mse": float(mse),
-                "r2": float(r2),
-                "rmse": float(np.sqrt(mse)),
-                "accuracy": float(max(0, min(100, r2 * 100)))
-            },
-            "is_grouped": False  # default flag
+            "metrics": metrics_dict,
+            "is_grouped": False
         }
 
         # handle grouping if requested
