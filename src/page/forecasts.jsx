@@ -612,7 +612,7 @@ export default function Forecasts() {
                     />
                   </div>
                   <span className="metric-value">
-                    ${metrics.mae?.toFixed(2) || "N/A"}
+                    ₹{metrics.mae?.toFixed(2) || "N/A"}
                   </span>
                 </div>
               </div>
@@ -633,7 +633,7 @@ export default function Forecasts() {
                     />
                   </div>
                   <span className="metric-value">
-                    ${metrics.rmse?.toFixed(2) || "N/A"}
+                    ₹{metrics.rmse?.toFixed(2) || "N/A"}
                   </span>
                 </div>
               </div>
@@ -851,7 +851,7 @@ export default function Forecasts() {
                               }
                               return (
                                 <td key={grp}>
-                                  {value != null ? `$${value.toFixed(2)}` : "N/A"}
+                                  {value != null ? `₹${value.toFixed(2)}` : "N/A"}
                                 </td>
                               );
                             })}
@@ -875,7 +875,7 @@ export default function Forecasts() {
                         <td>{date}</td>
                         <td>
                           {forecastData?.forecast?.[index] != null
-                            ? `$${forecastData.forecast[index].toFixed(2)}`
+                            ? `₹${forecastData.forecast[index].toFixed(2)}`
                             : "N/A"}
                         </td>
                       </tr>
