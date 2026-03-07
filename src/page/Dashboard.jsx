@@ -49,14 +49,15 @@ const Dashboard = () => {
   const fetchDashboardData = async () => {
     try {
       setLoading(true);
-      const data = await apiCall("/api/sales");
+      const data = await apiCall("/api/salesdata");
       console.log("Dashboard data fetched:", data);
       
-      if (data && Array.isArray(data) && data.length > 0) {
+      if (data && data.data && Array.isArray(data.data) && data.data.length > 0) {
+        const salesList = data.data;
         // Calculate basic stats
-        const totalSales = data.reduce((sum, item) => sum + (Number(item.weekly_sales || item.Weekly_Sales) || 0), 0);
-        const totalOrders = data.length;
-        const avgOrderValue = totalSales / totalOrders;
+        const totalSales = salesList.reduce((sum, item) => sum + (Number(item.Weekly_Sales || item.weekly_sales || item.Sales || item.Amount) || 0), 0);
+        const totalOrders = salesList.length;
+        const avgOrderValue = totalOrders > 0 ? totalSales / totalOrders : 0;
         
         setStats({
           totalSales: totalSales.toLocaleString(undefined, { maximumFractionDigits: 2 }),
@@ -66,16 +67,25 @@ const Dashboard = () => {
         });
 
         // Prepare chart data (group by date)
-        const sortedData = [...data].sort((a, b) => new Date(a.date || a.Date) - new Date(b.date || b.Date)).slice(-12);
+        const dateKey = salesList[0].Date || salesList[0].date || 'Date';
+        const salesKey = salesList[0].Weekly_Sales || salesList[0].weekly_sales || salesList[0].Sales || salesList[0].Amount ? 
+          (salesList[0].Weekly_Sales ? 'Weekly_Sales' : (salesList[0].weekly_sales ? 'weekly_sales' : (salesList[0].Sales ? 'Sales' : 'Amount'))) : 'Amount';
+
+        const sortedData = [...salesList]
+          .filter(item => item[dateKey])
+          .sort((a, b) => new Date(a[dateKey]) - new Date(b[dateKey]))
+          .slice(-20);
+
         setChartData({
-          labels: sortedData.map(item => item.date || item.Date),
+          labels: sortedData.map(item => item[dateKey]),
           datasets: [
             {
-              label: 'Recent Sales',
-              data: sortedData.map(item => item.weekly_sales || item.Weekly_Sales),
+              label: 'Sales Trend',
+              data: sortedData.map(item => Number(item[salesKey]) || 0),
               borderColor: 'rgb(99, 102, 241)',
               backgroundColor: 'rgba(99, 102, 241, 0.5)',
               tension: 0.3,
+              fill: true,
             },
           ],
         });
@@ -87,7 +97,7 @@ const Dashboard = () => {
     }
   };
 
-  if (loading) {
+  if (loading && false) {
     return (
       <div className="flex items-center justify-center h-full">
         <Loader2 className="w-8 h-8 animate-spin text-indigo-600" />

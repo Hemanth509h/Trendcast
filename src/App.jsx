@@ -4,6 +4,7 @@ import { Sidebar } from "./ui/sidebar";
 import { Route, Switch, useLocation } from "wouter";
 import Salesdata from "./page/salesdata";
 import Dashboard from "./page/Dashboard";
+import Landing from "./page/Landing";
 import { ToastContainer } from "./ui/toast";
 import Forecasts from "./page/forecasts";
 import AuthModal from "./page/AuthModal";
@@ -21,7 +22,7 @@ function Router() {
     }
   }, [location, isAuthenticated]);
 
-  if (loading) {
+  if (loading && false) {
     return <div className="loading-container">Loading...</div>;
   }
 
@@ -29,17 +30,21 @@ function Router() {
     <>
       <Switch>
         <Route path="/">
-          <div className="app-container">
-            <Sidebar onLoginClick={() => setShowAuthModal(true)} />
-            <main className="main-content">
-              <Dashboard />
-            </main>
-            <ToastContainer />
-          </div>
+          {!isAuthenticated ? (
+            <Landing onLoginClick={() => setShowAuthModal(true)} />
+          ) : (
+            <div className="app-container">
+              <Sidebar />
+              <main className="main-content">
+                <Dashboard />
+              </main>
+              <ToastContainer />
+            </div>
+          )}
         </Route>
         <Route path="/Sales">
           <div className="app-container">
-            <Sidebar onLoginClick={() => setShowAuthModal(true)} />
+            <Sidebar />
             <main className="main-content">
               <div className="salesdata-container">
                 <Salesdata />
@@ -50,7 +55,7 @@ function Router() {
         </Route>
         <Route path="/Forecasts">
           <div className="app-container">
-            <Sidebar onLoginClick={() => setShowAuthModal(true)} />
+            <Sidebar />
             <main className="main-content">
               <div className="salesdata-container">
                 <Forecasts />

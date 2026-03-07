@@ -54,7 +54,7 @@ hr {
   text-decoration: none;
   animation: 15s forwards;
   font-weight: 500;
-  
+
 }
 .menu-item:hover{
   color: #1d4fd7;
@@ -120,7 +120,7 @@ hr {
   background: white;
   border: 1px solid transparent;
   transition: all 0.2s ease;
-  
+
 }
 
 /* Clear Data (red outline) */

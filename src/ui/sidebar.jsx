@@ -60,11 +60,11 @@ export function Sidebar({ onLoginClick }) {
             );
           })}
         </div>
-        
+
         <hr />
 
         <div className="menu" style={{ marginTop: 'auto' }}>
-        
+
           {!user ? (
             <button className="menu-item" onClick={onLoginClick} style={{ background: 'none', border: 'none', width: '100%', cursor: 'pointer', textAlign: 'left' ,borderRadius: '0'}}>
               <LogIn className="menu-icon" />
@@ -72,7 +72,7 @@ export function Sidebar({ onLoginClick }) {
             </button>
           ) : null}
         </div>
-        
+
         {/* User Section */}
         {user && (
           <div className="sidebar-user">
