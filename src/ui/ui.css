@@ -305,6 +305,7 @@ hr {
 .sidebar-user {
   margin-top: auto;
   padding-top: 10px;
+  width: 98%;
 }
 
 .user-info {
