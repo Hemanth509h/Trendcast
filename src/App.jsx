@@ -21,7 +21,7 @@ function Router() {
     }
   }, [location, isAuthenticated]);
 
-  if (loading && false) {
+  if (loading) {
     return <div className="loading-container">Loading...</div>;
   }
 
@@ -30,7 +30,7 @@ function Router() {
       <Switch>
         <Route path="/">
           <div className="app-container">
-            <Sidebar />
+            <Sidebar onLoginClick={() => setShowAuthModal(true)} />
             <main className="main-content">
               <Dashboard />
             </main>
@@ -39,7 +39,7 @@ function Router() {
         </Route>
         <Route path="/Sales">
           <div className="app-container">
-            <Sidebar />
+            <Sidebar onLoginClick={() => setShowAuthModal(true)} />
             <main className="main-content">
               <div className="salesdata-container">
                 <Salesdata />
@@ -50,7 +50,7 @@ function Router() {
         </Route>
         <Route path="/Forecasts">
           <div className="app-container">
-            <Sidebar />
+            <Sidebar onLoginClick={() => setShowAuthModal(true)} />
             <main className="main-content">
               <div className="salesdata-container">
                 <Forecasts />
