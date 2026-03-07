@@ -13,7 +13,7 @@ body {
   font-weight: bold;
   padding-bottom: 15px;
   color:black;
-
+margin-bottom: 10px;
 }
 .linechart {
   color: #1d4fd7;
@@ -30,10 +30,11 @@ body {
   padding: 1rem;
   border: 0.5px solid #e6e8ec;
   box-sizing: border-box;
+  align-items: center;
 }
 hr {
   border: 0.1sm solid #6a6b6d;
-  width: 100%;
+  width: 90%;
 }
 .menu {
   font-family: Inter, sans-serif;
@@ -298,10 +299,7 @@ hr {
   flex-direction: column;
 }
 
-.sidebar-content {
-  flex: 1;
-  overflow-y: auto;
-}
+
 
 .sidebar-user {
   margin-top: auto;

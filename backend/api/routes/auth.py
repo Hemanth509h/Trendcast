@@ -50,7 +50,6 @@ async def signup(req: SignUpRequest):
         auth_response = supabase.auth.sign_up({"email": req.email, "password": req.password})
 
         # Debug: log raw response shape (helps diagnose 500s)
-        print("[auth.signup] raw response:", auth_response)
 
         # Parse response (support both dict-style and attribute-style responses)
         user_obj = None
@@ -123,7 +122,6 @@ async def login(req: LoginRequest):
     try:
         # Authenticate with Supabase (pass dict payload per client API)
         auth_response = supabase.auth.sign_in_with_password({"email": req.email, "password": req.password})
-        print("[auth.login] raw response:", auth_response)
 
         # Parse response
         user_obj = None
@@ -214,13 +212,11 @@ async def get_current_user(request: Request):
             raise HTTPException(status_code=401, detail="No token provided")
 
         # Verify token with Supabase
-        print(f"[auth.me] verifying token: {token[:20]}...")
         try:
             possible = supabase.auth.get_user(token)
         except TypeError:
             possible = supabase.auth.get_user(access_token=token)
 
-        print("[auth.me] raw get_user:", possible)
 
         user_obj = None
         if isinstance(possible, dict):

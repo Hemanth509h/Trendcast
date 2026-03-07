@@ -64,18 +64,9 @@ export function Sidebar({ onLoginClick }) {
         <hr />
 
         <div className="menu" style={{ marginTop: 'auto' }}>
-          {user && (
-            <div className="footer" style={{ padding: '12px', fontSize: '0.8rem', color: 'var(--muted-foreground)' }}>
-              <h5 className="h5" style={{ marginBottom: '4px', fontWeight: '600' }}>Pro Tip</h5>
-              <p>
-                Generate forecasts regularly to keep predictions accurate with
-                latest sales data.
-              </p>
-            </div>
-          )}
-          
+        
           {!user ? (
-            <button className="menu-item" onClick={onLoginClick} style={{ background: 'none', border: 'none', width: '100%', cursor: 'pointer', textAlign: 'left' }}>
+            <button className="menu-item" onClick={onLoginClick} style={{ background: 'none', border: 'none', width: '100%', cursor: 'pointer', textAlign: 'left' ,borderRadius: '0'}}>
               <LogIn className="menu-icon" />
               <span>Login</span>
             </button>
