@@ -6,8 +6,7 @@ export default defineConfig({
 
   server: {
     host: true,
-   
-
+  
     watch: {
       usePolling: true,
       interval: 300,
