@@ -13,7 +13,7 @@ import {
   FileSpreadsheet,
 } from "lucide-react";
 
-import "./salesdata.css";
+import "./css/salesdata.css";
 import Dialog from "../ui/Dialog";
 import "../ui/ui.css";
 import { toast } from "../ui/toast";
@@ -23,7 +23,6 @@ export default function Salesdata() {
   const [isopenimportdialog, setisopenimportdialog] = useState(false);
   const [isopenadddialog, setisopenadddialog] = useState(false);
   const [isuploding, setisuploding] = useState(false);
-  const [salesdatauploaed, setsalesdatauploaed] = useState(false);
   const [formData, setFormData] = useState({});
   const [dataloading, setDataloading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
@@ -70,7 +69,6 @@ export default function Salesdata() {
 
       setisopenimportdialog(false);
       setimportedfile(null);
-      setsalesdatauploaed(true);
       // Clear sessionStorage to refresh data
       sessionStorage.removeItem("salesdata");
       fatchdata();

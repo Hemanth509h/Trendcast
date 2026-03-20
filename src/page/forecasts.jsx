@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo } from "react";
 import { toast } from "../ui/toast";
-import "./forecasts.css";
+import "./css/forecasts.css";
 import "../ui/ui.css";
 import { getApiUrl } from "../utils/api";
 import { Info } from "lucide-react";
