@@ -4,23 +4,21 @@ from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 from statsmodels.tsa.statespace.sarimax import SARIMAX
-from supabase import create_client, Client
 from datetime import datetime
 import os
 from dotenv import load_dotenv
+from jose import JWTError, jwt
+from ..database import sales_collection, forecasts_collection
 
 load_dotenv()
 
 router = APIRouter()
 
 # ==========================
-# SUPABASE CONFIG
+# AUTH CONFIG
 # ==========================
-SUPABASE_URL = os.getenv("SUPABASE_URL", "https://coztxkaoyxphgvoulbel.supabase.co")
-SUPABASE_KEY = os.getenv("SUPABASE_KEY", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNvenR4a2FveXhwaGd2b3VsYmVsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIxOTI3MTEsImV4cCI6MjA4Nzc2ODcxMX0.Pa8rf_fFIAaIj0wiDGLoi11qP9mRqJl8YP7Qbt3ojkU")
-
-supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
-
+SECRET_KEY = os.getenv("SECRET_KEY", "your-secret-key-here")
+ALGORITHM = os.getenv("ALGORITHM", "HS256")
 
 # ==========================
 # REQUEST MODEL
@@ -31,24 +29,25 @@ class ForecastRequest(BaseModel):
     model: str = "sarima"
     group_by: str | None = None
 
-
 # ==========================
 # HELPER: GET USER ID FROM REQUEST
 # ==========================
-def get_user_id_from_request(request: Request) -> str:
+async def get_user_id_from_request(request: Request) -> str:
     """Extract and verify user_id from request token"""
-    token = getattr(request.state, "token", None)
-    if not token:
+    auth_header = request.headers.get("Authorization")
+    if not auth_header or not auth_header.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="No authentication token provided")
     
+    token = auth_header.split(" ")[1]
+    
     try:
-        user = supabase.auth.get_user(token)
-        if not user:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        user_id: str = payload.get("sub")
+        if user_id is None:
             raise HTTPException(status_code=401, detail="Invalid token")
-        return user.user.id
-    except Exception as e:
+        return user_id
+    except JWTError:
         raise HTTPException(status_code=401, detail="Unauthorized")
-
 
 # ==========================
 # FORECAST API
@@ -56,28 +55,20 @@ def get_user_id_from_request(request: Request) -> str:
 @router.post("/generateforecast")
 async def generate_forecast(req: ForecastRequest, request: Request):
     try:
-        # Get latest data without user filter since user_id column is missing
-        response = (
-            supabase.table("sales_data")
-            .select("*")
-            .order("id", desc=True)
-            .limit(1)
-            .execute()
-        )
+        user_id = await get_user_id_from_request(request)
         
-        user_id = "anonymous"
-        try:
-            user_id = get_user_id_from_request(request)
-        except:
-            pass
+        # Get latest data for this user
+        dataset = await sales_collection.find_one(
+            {"user_id": user_id},
+            sort=[("_id", -1)]
+        )
         
         column = req.column
         horizon = req.horizon
 
-        if not response.data:
-            raise HTTPException(status_code=400, detail="No data available in Supabase")
+        if not dataset:
+            raise HTTPException(status_code=400, detail="No data available in MongoDB")
 
-        dataset = response.data[0]
         df = pd.DataFrame(dataset.get("data", []))
 
         if df.empty or "Date" not in df.columns or column not in df.columns:
@@ -233,6 +224,7 @@ async def generate_forecast(req: ForecastRequest, request: Request):
 
         # SAVE FORECAST TO DATABASE
         forecast_record = {
+            "user_id": user_id,
             "column": column,
             "horizon": horizon,
             "model": req.model,
@@ -240,15 +232,7 @@ async def generate_forecast(req: ForecastRequest, request: Request):
             "created_at": datetime.utcnow().isoformat(),
         }
         
-        # Add user_id if column exists, otherwise omit
-        # (Assuming forecasts table might also miss user_id based on sales_data)
-        # For now, let's try to include it but wrap in try/except or just omit if unsure
-        # To be safe, let's see if we can check forecasts columns too or just omit
-        
-        try:
-            supabase.table("forecasts").insert(forecast_record).execute()
-        except Exception as db_err:
-            print(f"Warning: Could not save forecast to database: {db_err}")
+        await forecasts_collection.insert_one(forecast_record)
 
         return response_payload
 
@@ -257,25 +241,23 @@ async def generate_forecast(req: ForecastRequest, request: Request):
         print(traceback.format_exc())
         raise HTTPException(status_code=500, detail=str(e))
 
-
 # ==========================
 # GET USER FORECASTS
 # ==========================
 @router.get("/forecasts")
 async def get_user_forecasts(request: Request):
     try:
-        response = (
-            supabase.table("forecasts")
-            .select("*")
-            .order("created_at", desc=True)
-            .execute()
-        )
+        user_id = await get_user_id_from_request(request)
+        cursor = forecasts_collection.find({"user_id": user_id}).sort("created_at", -1)
+        forecasts = await cursor.to_list(length=100)
         
-        return {"forecasts": response.data}
+        for f in forecasts:
+            f["_id"] = str(f["_id"])
+            
+        return {"forecasts": forecasts}
     
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-
 
 # ==========================
 # GET SINGLE FORECAST
@@ -283,22 +265,19 @@ async def get_user_forecasts(request: Request):
 @router.get("/forecasts/{forecast_id}")
 async def get_forecast(forecast_id: str, request: Request):
     try:
-        response = (
-            supabase.table("forecasts")
-            .select("*")
-            .eq("id", forecast_id)
-            .single()
-            .execute()
-        )
+        from bson import ObjectId
+        user_id = await get_user_id_from_request(request)
         
-        if not response.data:
+        forecast = await forecasts_collection.find_one({"_id": ObjectId(forecast_id), "user_id": user_id})
+        
+        if not forecast:
             raise HTTPException(status_code=404, detail="Forecast not found")
         
-        return {"forecast": response.data}
+        forecast["_id"] = str(forecast["_id"])
+        return {"forecast": forecast}
     
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-
 
 # ==========================
 # DELETE FORECAST
@@ -306,7 +285,10 @@ async def get_forecast(forecast_id: str, request: Request):
 @router.delete("/forecasts/{forecast_id}")
 async def delete_forecast(forecast_id: str, request: Request):
     try:
-        supabase.table("forecasts").delete().eq("id", forecast_id).execute()
+        from bson import ObjectId
+        user_id = await get_user_id_from_request(request)
+        
+        await forecasts_collection.delete_one({"_id": ObjectId(forecast_id), "user_id": user_id})
         return {"message": "Forecast deleted successfully"}
     
     except Exception as e:

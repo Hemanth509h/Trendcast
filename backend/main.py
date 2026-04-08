@@ -13,7 +13,7 @@ load_dotenv()
 app = FastAPI(
     title="Sales Forecasting API",
     version="1.0.0",
-    description="Backend API for Sales Upload & Forecasting using Supabase"
+    description="Backend API for Sales Upload & Forecasting using MongoDB"
 )
 
 app.add_middleware(

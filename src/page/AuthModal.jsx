@@ -1,11 +1,10 @@
 import React, { useState, createContext, useContext, useEffect } from "react";
-import { Mail, Lock, User, AlertCircle, X } from "lucide-react";
+import { Mail, Lock, User, AlertCircle, X, CheckCircle, Loader } from "lucide-react";
 import { useLocation } from "wouter";
 import "./auth-modal.css";
 
 // -----------------------------------
 // Authentication context/provider
-// merged from AuthContext.jsx
 // -----------------------------------
 
 const AuthContext = createContext();
@@ -50,27 +49,51 @@ export const AuthProvider = ({ children }) => {
     checkAuth();
   }, []);
 
-  const signup = async (email, password, fullName) => {
+  const register = async (email, password, fullName) => {
     try {
       setError(null);
-      const response = await fetch(`${API_BASE_URL}/api/auth/signup`, {
+      const response = await fetch(`${API_BASE_URL}/api/auth/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password, full_name: fullName }),
       });
 
       const data = await response.json();
-      if (!response.ok) throw new Error(data.detail || "Signup failed");
+      if (!response.ok) throw new Error(data.detail || "Registration failed");
 
+      // Registration successful - user needs to verify email
       setToken(data.access_token);
       setUser(data.user);
       localStorage.setItem("authToken", data.access_token);
       localStorage.setItem("user", JSON.stringify(data.user));
-      window.location.reload();
+      
+      return { 
+        success: true, 
+        requiresVerification: true,
+        verificationToken: data.user.message?.split(": ")[1] || ""
+      };
+    } catch (err) {
+      const msg = err.message || "Error during registration";
+      setError(msg);
+      return { success: false, error: msg };
+    }
+  };
+
+  const verifyEmail = async (email, verificationToken) => {
+    try {
+      setError(null);
+      const response = await fetch(`${API_BASE_URL}/api/auth/verify-email`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, verification_token: verificationToken }),
+      });
+
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.detail || "Verification failed");
+
       return { success: true };
     } catch (err) {
-      setError(err.message || "Error during signup");
-      return { success: false };
+      return { success: false, error: err.message };
     }
   };
 
@@ -90,11 +113,11 @@ export const AuthProvider = ({ children }) => {
       setUser(data.user);
       localStorage.setItem("authToken", data.access_token);
       localStorage.setItem("user", JSON.stringify(data.user));
-      window.location.reload();
       return { success: true };
     } catch (err) {
-      setError(err.message || "Error during login");
-      return { success: false };
+      const msg = err.message || "Error during login";
+      setError(msg);
+      return { success: false, error: msg };
     }
   };
 
@@ -112,7 +135,29 @@ export const AuthProvider = ({ children }) => {
     setToken(null);
     localStorage.removeItem("authToken");
     localStorage.removeItem("user");
-    window.location.reload();
+  };
+
+  const updateProfile = async (fullName) => {
+    try {
+      setError(null);
+      const response = await fetch(`${API_BASE_URL}/api/auth/profile`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ full_name: fullName }),
+      });
+
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.detail || "Update failed");
+
+      setUser(data.user);
+      localStorage.setItem("user", JSON.stringify(data.user));
+      return { success: true };
+    } catch (err) {
+      return { success: false, error: err.message };
+    }
   };
 
   const getToken = () => token;
@@ -123,9 +168,11 @@ export const AuthProvider = ({ children }) => {
         user,
         loading,
         error,
-        signup,
+        register,
+        verifyEmail,
         login,
         logout,
+        updateProfile,
         getToken,
         isAuthenticated: !!user,
       }}
@@ -145,59 +192,128 @@ export default function AuthModal({ isOpen, onClose }) {
   const [fullName, setFullName] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const { login, signup } = useAuth();
+  const [success, setSuccess] = useState("");
+  const [needsVerification, setNeedsVerification] = useState(false);
+  const [verificationToken, setVerificationToken] = useState("");
+  const { login, register, verifyEmail } = useAuth();
   const [, setLocation] = useLocation();
+
+  const validateEmail = (email) => {
+    const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return re.test(email);
+  };
+
+  const validatePassword = (pwd) => {
+    if (pwd.length < 8) return "Password must be at least 8 characters";
+    if (!/[A-Z]/.test(pwd)) return "Password must contain an uppercase letter";
+    if (!/[a-z]/.test(pwd)) return "Password must contain a lowercase letter";
+    if (!/[0-9]/.test(pwd)) return "Password must contain a number";
+    return null;
+  };
+
+  const handleVerifyEmail = async (e) => {
+    e.preventDefault();
+    setError("");
+    setSuccess("");
+    setLoading(true);
+
+    if (!verificationToken.trim()) {
+      setError("Please enter the verification token");
+      setLoading(false);
+      return;
+    }
+
+    const result = await verifyEmail(email, verificationToken);
+    if (result.success) {
+      setSuccess("Email verified! Redirecting to dashboard...");
+      setTimeout(() => {
+        onClose();
+        setLocation("/Sales");
+      }, 2000);
+    } else {
+      setError(result.error || "Verification failed");
+    }
+    setLoading(false);
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
-
-    if (!isLogin && !fullName) {
-      setError("Full name is required");
-      return;
-    }
-
-    if (!isLogin && password !== confirmPassword) {
-      setError("Passwords do not match");
-      return;
-    }
-
-    if (!isLogin && password.length < 6) {
-      setError("Password must be at least 6 characters");
-      return;
-    }
-
-    setLoading(true);
+    setSuccess("");
 
     if (isLogin) {
+      // Login validation
+      if (!email) {
+        setError("Email is required");
+        return;
+      }
+      if (!validateEmail(email)) {
+        setError("Please enter a valid email");
+        return;
+      }
+      if (!password) {
+        setError("Password is required");
+        return;
+      }
+
+      setLoading(true);
       const result = await login(email, password);
+      setLoading(false);
+
       if (result.success) {
-        setLocation("/Sales");
-        onClose();
+        setSuccess("Login successful! Redirecting...");
+        setTimeout(() => {
+          onClose();
+          setLocation("/Sales");
+        }, 1000);
       } else {
-        setError(result.error || "Login failed");
+        setError(result.error);
       }
     } else {
-      const result = await signup(email, password, fullName);
+      // Registration validation
+      if (!fullName.trim()) {
+        setError("Full name is required");
+        return;
+      }
+      if (!email) {
+        setError("Email is required");
+        return;
+      }
+      if (!validateEmail(email)) {
+        setError("Please enter a valid email");
+        return;
+      }
+      if (!password) {
+        setError("Password is required");
+        return;
+      }
+
+      const passwordError = validatePassword(password);
+      if (passwordError) {
+        setError(passwordError);
+        return;
+      }
+
+      if (password !== confirmPassword) {
+        setError("Passwords do not match");
+        return;
+      }
+
+      setLoading(true);
+      const result = await register(email, password, fullName);
+      setLoading(false);
+
       if (result.success) {
-        setEmail("");
+        setSuccess(
+          "Registration successful! Please check your verification token."
+        );
+        setNeedsVerification(true);
         setPassword("");
         setConfirmPassword("");
-        setFullName("");
-        setIsLogin(true);
-        setError("");
-        // Auto login after signup
-        const loginResult = await login(email, password);
-        if (loginResult.success) {
-          setLocation("/Sales");
-          onClose();
-        }
       } else {
-        setError(result.error || "Registration failed");
+        setError(result.error);
       }
     }
-
-    setLoading(false);
   };
 
   if (!isOpen) return null;
@@ -210,12 +326,21 @@ export default function AuthModal({ isOpen, onClose }) {
         </button>
 
         <div className="auth-modal-header">
-          <h2>{isLogin ? "Welcome Back" : "Join Trendcast"}</h2>
-          <p>
-            {isLogin
-              ? "Login to your account"
-              : "Create your account to get started"}
-          </p>
+          {needsVerification ? (
+            <>
+              <h2>Verify Your Email</h2>
+              <p>Enter the verification token sent to your email</p>
+            </>
+          ) : (
+            <>
+              <h2>{isLogin ? "Welcome Back" : "Join Trendcast"}</h2>
+              <p>
+                {isLogin
+                  ? "Login to your account"
+                  : "Create your account to get started"}
+              </p>
+            </>
+          )}
         </div>
 
         {error && (
@@ -225,91 +350,163 @@ export default function AuthModal({ isOpen, onClose }) {
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="auth-modal-form">
-          {!isLogin && (
-            <div className="form-group">
-              <label htmlFor="fullName">Full Name</label>
-              <div className="input-wrapper">
-                <User size={18} />
-                <input
-                  id="fullName"
-                  type="text"
-                  placeholder="John Doe"
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
-                  required={!isLogin}
-                />
-              </div>
-            </div>
-          )}
-
-          <div className="form-group">
-            <label htmlFor="email">Email Address</label>
-            <div className="input-wrapper">
-              <Mail size={18} />
-              <input
-                id="email"
-                type="email"
-                placeholder="you@example.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-              />
-            </div>
+        {success && (
+          <div className="auth-success-banner">
+            <CheckCircle size={20} />
+            <span>{success}</span>
           </div>
+        )}
 
-          <div className="form-group">
-            <label htmlFor="password">Password</label>
-            <div className="input-wrapper">
-              <Lock size={18} />
-              <input
-                id="password"
-                type="password"
-                placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-              />
-            </div>
-          </div>
-
-          {!isLogin && (
+        {needsVerification ? (
+          <form onSubmit={handleVerifyEmail} className="auth-modal-form">
             <div className="form-group">
-              <label htmlFor="confirmPassword">Confirm Password</label>
+              <label htmlFor="verifyToken">Verification Token</label>
               <div className="input-wrapper">
                 <Lock size={18} />
                 <input
-                  id="confirmPassword"
-                  type="password"
-                  placeholder="••••••••"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  required={!isLogin}
+                  id="verifyToken"
+                  type="text"
+                  placeholder="Paste token here"
+                  value={verificationToken}
+                  onChange={(e) => setVerificationToken(e.target.value)}
+                  required
                 />
               </div>
             </div>
-          )}
 
-          <button type="submit" className="auth-submit-btn" disabled={loading}>
-            {loading ? (isLogin ? "Logging in..." : "Creating account...") : isLogin ? "Login" : "Create Account"}
-          </button>
-        </form>
+            <button
+              type="submit"
+              className="auth-submit-btn"
+              disabled={loading}
+            >
+              {loading ? (
+                <>
+                  <Loader size={18} className="spinner" />
+                  Verifying...
+                </>
+              ) : (
+                "Verify Email"
+              )}
+            </button>
 
-        <div className="auth-modal-footer">
-          <p>
-            {isLogin ? "Don't have an account? " : "Already have an account? "}
             <button
               type="button"
-              className="auth-toggle-btn"
+              className="auth-back-btn"
               onClick={() => {
-                setIsLogin(!isLogin);
-                setError("");
+                setNeedsVerification(false);
+                setVerificationToken("");
               }}
             >
-              {isLogin ? "Sign up" : "Login"}
+              Back to {isLogin ? "Login" : "Registration"}
             </button>
-          </p>
-        </div>
+          </form>
+        ) : (
+          <form onSubmit={handleSubmit} className="auth-modal-form">
+            {!isLogin && (
+              <div className="form-group">
+                <label htmlFor="fullName">Full Name</label>
+                <div className="input-wrapper">
+                  <User size={18} />
+                  <input
+                    id="fullName"
+                    type="text"
+                    placeholder="John Doe"
+                    value={fullName}
+                    onChange={(e) => setFullName(e.target.value)}
+                    required={!isLogin}
+                  />
+                </div>
+              </div>
+            )}
+
+            <div className="form-group">
+              <label htmlFor="email">Email Address</label>
+              <div className="input-wrapper">
+                <Mail size={18} />
+                <input
+                  id="email"
+                  type="email"
+                  placeholder="you@example.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="password">Password</label>
+              <div className="input-wrapper">
+                <Lock size={18} />
+                <input
+                  id="password"
+                  type="password"
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                />
+              </div>
+              {!isLogin && (
+                <small className="password-hint">
+                  Min 8 chars, 1 uppercase, 1 lowercase, 1 number
+                </small>
+              )}
+            </div>
+
+            {!isLogin && (
+              <div className="form-group">
+                <label htmlFor="confirmPassword">Confirm Password</label>
+                <div className="input-wrapper">
+                  <Lock size={18} />
+                  <input
+                    id="confirmPassword"
+                    type="password"
+                    placeholder="••••••••"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    required={!isLogin}
+                  />
+                </div>
+              </div>
+            )}
+
+            <button type="submit" className="auth-submit-btn" disabled={loading}>
+              {loading ? (
+                <>
+                  <Loader size={18} className="spinner" />
+                  {isLogin ? "Logging in..." : "Creating account..."}
+                </>
+              ) : isLogin ? (
+                "Login"
+              ) : (
+                "Create Account"
+              )}
+            </button>
+          </form>
+        )}
+
+        {!needsVerification && (
+          <div className="auth-modal-footer">
+            <p>
+              {isLogin ? "Don't have an account? " : "Already have an account? "}
+              <button
+                type="button"
+                onClick={() => {
+                  setIsLogin(!isLogin);
+                  setError("");
+                  setSuccess("");
+                  setEmail("");
+                  setPassword("");
+                  setConfirmPassword("");
+                  setFullName("");
+                }}
+              >
+                {isLogin ? "Sign up" : "Login"}
+              </button>
+            </p>
+          </div>
+        )}
       </div>
     </div>
   );

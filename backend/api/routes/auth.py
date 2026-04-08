@@ -1,284 +1,351 @@
 from fastapi import APIRouter, HTTPException, Depends, Request
-from pydantic import BaseModel, EmailStr
-from supabase import create_client, Client
-import os
-from dotenv import load_dotenv
-import jwt
+from pydantic import BaseModel, EmailStr, Field
 from datetime import datetime, timedelta
-import json
-
-load_dotenv()
+import os
+from jose import JWTError, jwt
+from passlib.context import CryptContext
+from typing import Optional
+import uuid
+import secrets
+import re
+from ..database import users_collection
 
 router = APIRouter()
 
 # ==========================
-# SUPABASE CONFIG
+# AUTH CONFIG
 # ==========================
-SUPABASE_URL = os.getenv("SUPABASE_URL", "https://coztxkaoyxphgvoulbel.supabase.co")
-SUPABASE_KEY = os.getenv("SUPABASE_KEY", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNvenR4a2FveXhwaGd2b3VsYmVsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIxOTI3MTEsImV4cCI6MjA4Nzc2ODcxMX0.Pa8rf_fFIAaIj0wiDGLoi11qP9mRqJl8YP7Qbt3ojkU")
-SUPABASE_JWT_SECRET = os.getenv("SUPABASE_JWT_SECRET", "your-jwt-secret-key")
+SECRET_KEY = os.getenv("SECRET_KEY", "your-secret-key-here")
+ALGORITHM = os.getenv("ALGORITHM", "HS256")
+ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "1440"))
 
-supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
+# ==========================
+# HELPER FUNCTIONS
+# ==========================
+def verify_password(plain_password: str, hashed_password: str) -> bool:
+    """Verify password against hash"""
+    try:
+        return pwd_context.verify(plain_password, hashed_password)
+    except Exception:
+        return False
+
+def get_password_hash(password: str) -> str:
+    """Hash password"""
+    return pwd_context.hash(password)
+
+def validate_password(password: str) -> tuple[bool, str]:
+    """Validate password strength"""
+    if len(password) < 8:
+        return False, "Password must be at least 8 characters"
+    if not re.search(r"[A-Z]", password):
+        return False, "Password must contain at least one uppercase letter"
+    if not re.search(r"[a-z]", password):
+        return False, "Password must contain at least one lowercase letter"
+    if not re.search(r"[0-9]", password):
+        return False, "Password must contain at least one number"
+    return True, "Password is valid"
+
+def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
+    """Create JWT access token"""
+    to_encode = data.copy()
+    if expires_delta:
+        expire = datetime.utcnow() + expires_delta
+    else:
+        expire = datetime.utcnow() + timedelta(minutes=15)
+    to_encode.update({"exp": expire})
+    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+    return encoded_jwt
+
+def generate_verification_token() -> str:
+    """Generate a random verification token"""
+    return secrets.token_urlsafe(32)
+
+def format_user_response(user: dict) -> dict:
+    """Format user data for response (exclude sensitive fields)"""
+    return {
+        "id": user.get("id"),
+        "email": user.get("email"),
+        "full_name": user.get("full_name"),
+        "email_verified": user.get("email_verified", False),
+        "created_at": user.get("created_at"),
+    }
 
 # ==========================
 # REQUEST MODELS
 # ==========================
 class SignUpRequest(BaseModel):
     email: EmailStr
-    password: str
-    full_name: str | None = None
-
+    password: str = Field(..., min_length=8)
+    full_name: str = Field(..., min_length=1)
 
 class LoginRequest(BaseModel):
     email: EmailStr
     password: str
 
+class VerifyEmailRequest(BaseModel):
+    email: EmailStr
+    verification_token: str
+
+class PasswordResetRequest(BaseModel):
+    email: EmailStr
+
+class UpdatePasswordRequest(BaseModel):
+    old_password: str
+    new_password: str = Field(..., min_length=8)
+
+class UpdateProfileRequest(BaseModel):
+    full_name: Optional[str] = None
 
 class AuthResponse(BaseModel):
     access_token: str
     user: dict
 
+class MessageResponse(BaseModel):
+    message: str
 
 # ==========================
 # SIGNUP ENDPOINT
 # ==========================
-@router.post("/auth/signup", response_model=AuthResponse)
-async def signup(req: SignUpRequest):
+@router.post("/auth/register", response_model=AuthResponse)
+async def register(req: SignUpRequest):
+    """Register a new user with email verification"""
+    
+    # Validate password strength
+    is_valid, message = validate_password(req.password)
+    if not is_valid:
+        raise HTTPException(status_code=400, detail=message)
+    
+    # Check if user already exists
+    existing_user = await users_collection.find_one({"email": req.email.lower()})
+    if existing_user:
+        raise HTTPException(status_code=400, detail="Email already registered. Please login or use a different email.")
+    
+    # Validate full name
+    if not req.full_name or len(req.full_name.strip()) == 0:
+        raise HTTPException(status_code=400, detail="Full name is required")
+    
+    user_id = str(uuid.uuid4())
+    hashed_password = get_password_hash(req.password)
+    verification_token = generate_verification_token()
+    
+    user_data = {
+        "id": user_id,
+        "email": req.email.lower(),
+        "hashed_password": hashed_password,
+        "full_name": req.full_name.strip(),
+        "email_verified": False,  # User must verify email
+        "verification_token": verification_token,
+        "created_at": datetime.utcnow().isoformat(),
+        "updated_at": datetime.utcnow().isoformat(),
+    }
+    
     try:
-        # Create user in Supabase Auth (pass dict payload per client API)
-        auth_response = supabase.auth.sign_up({"email": req.email, "password": req.password})
-
-        # Debug: log raw response shape (helps diagnose 500s)
-
-        # Parse response (support both dict-style and attribute-style responses)
-        user_obj = None
-        session_obj = None
-        if isinstance(auth_response, dict):
-            # supabase-py sometimes returns {'data': {...}, 'error': ...}
-            data = auth_response.get("data") or auth_response.get("user") or {}
-            # Try common keys
-            user_obj = data.get("user") if isinstance(data, dict) else None
-            session_obj = data.get("session") if isinstance(data, dict) else None
-            # fallback top-level
-            if not user_obj and auth_response.get("user"):
-                user_obj = auth_response.get("user")
-            if not session_obj and auth_response.get("session"):
-                session_obj = auth_response.get("session")
-        else:
-            # Attribute-style (older client)
-            user_obj = getattr(auth_response, "user", None)
-            session_obj = getattr(auth_response, "session", None)
-
-        if not user_obj:
-            raise HTTPException(status_code=400, detail="Failed to create user account")
-
-        user_id = user_obj.get("id") if isinstance(user_obj, dict) else getattr(user_obj, "id", None)
-
-        # Create user profile in database
-        try:
-            user_data = {
-                "id": user_id,
-                "email": req.email,
-                "full_name": req.full_name or req.email.split("@")[0],
-                "created_at": datetime.utcnow().isoformat(),
-                "updated_at": datetime.utcnow().isoformat(),
-            }
-            supabase.table("users").upsert(user_data).execute()
-        except Exception as db_err:
-            print(f"[auth.signup] database error: {db_err}")
-            # If user creation in Auth succeeded but DB profile failed, 
-            # we might want to continue or handle it. For now, let's log.
-
-        access_token = None
-        if session_obj:
-            access_token = session_obj.get("access_token") if isinstance(session_obj, dict) else getattr(session_obj, "access_token", None)
-
-        return AuthResponse(
-            access_token=access_token or "",
-            user={
-                "id": user_id,
-                "email": req.email,
-                "full_name": req.full_name,
-            }
-        )
-
+        await users_collection.insert_one(user_data)
     except Exception as e:
-        # Log exception for debugging
-        print("[auth.signup] exception:", repr(e))
-        print("[auth.signup] exception str:", str(e))
-        error_str = str(e).lower()
-        if "already registered" in error_str or "user already exists" in error_str or "unique" in error_str:
-            raise HTTPException(status_code=400, detail="Email already registered")
-        # Return error details for debugging
-        raise HTTPException(status_code=500, detail=f"Signup error: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to create user. Please try again.")
+    
+    # Generate token (unverified user can still access with limitations)
+    access_token = create_access_token(data={"sub": user_id, "verified": False})
+    
+    # In production, send verification email here
+    # For now, we log it for testing
+    print(f"[VERIFICATION] User {req.email} - Token: {verification_token}")
+    
+    return AuthResponse(
+        access_token=access_token,
+        user={
+            "id": user_id,
+            "email": user_data["email"],
+            "full_name": user_data["full_name"],
+            "email_verified": False,
+            "message": f"Account created! Verification token: {verification_token}"
+        }
+    )
 
+# ==========================
+# VERIFY EMAIL ENDPOINT
+# ==========================
+@router.post("/auth/verify-email", response_model=MessageResponse)
+async def verify_email(req: VerifyEmailRequest):
+    """Verify user email with token"""
+    
+    user = await users_collection.find_one({"email": req.email.lower()})
+    
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    if user.get("email_verified"):
+        raise HTTPException(status_code=400, detail="Email already verified")
+    
+    if user.get("verification_token") != req.verification_token:
+        raise HTTPException(status_code=401, detail="Invalid verification token")
+    
+    # Update user to verified
+    await users_collection.update_one(
+        {"id": user["id"]},
+        {"$set": {
+            "email_verified": True,
+            "verification_token": None,  # Clear token after use
+            "updated_at": datetime.utcnow().isoformat()
+        }}
+    )
+    
+    return MessageResponse(message="Email verified successfully! You can now login.")
 
 # ==========================
 # LOGIN ENDPOINT
 # ==========================
 @router.post("/auth/login", response_model=AuthResponse)
 async def login(req: LoginRequest):
+    """Login user with email and password"""
+    
     try:
-        # Authenticate with Supabase (pass dict payload per client API)
-        auth_response = supabase.auth.sign_in_with_password({"email": req.email, "password": req.password})
-
-        # Parse response
-        user_obj = None
-        session_obj = None
-        if isinstance(auth_response, dict):
-            data = auth_response.get("data") or auth_response.get("user") or {}
-            user_obj = data.get("user") if isinstance(data, dict) else None
-            session_obj = data.get("session") if isinstance(data, dict) else None
-            if not user_obj and auth_response.get("user"):
-                user_obj = auth_response.get("user")
-            if not session_obj and auth_response.get("session"):
-                session_obj = auth_response.get("session")
-        else:
-            user_obj = getattr(auth_response, "user", None)
-            session_obj = getattr(auth_response, "session", None)
-
-        if not user_obj:
-            raise HTTPException(status_code=401, detail="Invalid email or password")
-
-        user_id = user_obj.get("id") if isinstance(user_obj, dict) else getattr(user_obj, "id", None)
-
-        # Get user profile
-        user_response = supabase.table("users").select("*").eq("id", user_id).execute()
-        user_profile = None
-        if isinstance(user_response, dict):
-            data = user_response.get("data")
-            user_profile = data[0] if data else None
-        else:
-            user_profile = getattr(user_response, "data", None)
-            if user_profile:
-                user_profile = user_profile[0] if isinstance(user_profile, list) and user_profile else None
-
-        if not user_profile:
-            # Fallback to creating a profile if missing
-            try:
-                user_profile = {
-                    "id": user_id,
-                    "email": req.email,
-                    "full_name": req.email.split("@")[0],
-                    "created_at": datetime.utcnow().isoformat(),
-                    "updated_at": datetime.utcnow().isoformat(),
-                }
-                supabase.table("users").upsert(user_profile).execute()
-            except:
-                pass
-
-        access_token = None
-        if session_obj:
-            access_token = session_obj.get("access_token") if isinstance(session_obj, dict) else getattr(session_obj, "access_token", None)
-
-        return AuthResponse(access_token=access_token or "", user=user_profile)
-
+        user = await users_collection.find_one({"email": req.email.lower()})
     except Exception as e:
-        print("[auth.login] exception:", repr(e))
-        print("[auth.login] exception str:", str(e))
+        raise HTTPException(status_code=500, detail="Database error")
+    
+    if not user:
         raise HTTPException(status_code=401, detail="Invalid email or password")
-
-
-# ==========================
-# LOGOUT ENDPOINT
-# ==========================
-@router.post("/auth/logout")
-async def logout(request: Request):
-    try:
-        # Revoke session (optional - mainly client-side)
-        return {"message": "Logged out successfully"}
-    except Exception as e:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Logout error: {str(e)}"
-        )
-
+    
+    if not verify_password(req.password, user.get("hashed_password", "")):
+        raise HTTPException(status_code=401, detail="Invalid email or password")
+    
+    # Warning if email not verified (but still allow login for now)
+    email_verified = user.get("email_verified", False)
+    
+    access_token = create_access_token(
+        data={"sub": user["id"], "verified": email_verified}
+    )
+    
+    return AuthResponse(
+        access_token=access_token,
+        user=format_user_response(user)
+    )
 
 # ==========================
 # GET CURRENT USER ENDPOINT
 # ==========================
 @router.get("/auth/me")
 async def get_current_user(request: Request):
+    """Get current authenticated user"""
+    
+    auth_header = request.headers.get("Authorization")
+    if not auth_header or not auth_header.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="No authentication token provided")
+    
+    token = auth_header.split(" ")[1]
+    
     try:
-        token = getattr(request.state, "token", None)
-        if not token:
-            # Fallback to header if state not populated by middleware
-            auth_header = request.headers.get("Authorization")
-            if auth_header and auth_header.startswith("Bearer "):
-                token = auth_header.split(" ")[1]
-
-        if not token:
-            raise HTTPException(status_code=401, detail="No token provided")
-
-        # Verify token with Supabase
-        try:
-            possible = supabase.auth.get_user(token)
-        except TypeError:
-            possible = supabase.auth.get_user(access_token=token)
-
-
-        user_obj = None
-        if isinstance(possible, dict):
-            user_obj = possible.get("data") or possible.get("user")
-            if isinstance(user_obj, dict) and user_obj.get("user"):
-                user_obj = user_obj.get("user")
-        else:
-            user_obj = getattr(possible, "user", None)
-
-        if not user_obj:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        user_id: str = payload.get("sub")
+        if user_id is None:
             raise HTTPException(status_code=401, detail="Invalid token")
+    except JWTError:
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
+    
+    try:
+        user = await users_collection.find_one({"id": user_id})
+    except Exception:
+        user = None
+    
+    if not user:
+        raise HTTPException(status_code=401, detail="User not found")
+    
+    return {"user": format_user_response(user)}
 
-        user_id = user_obj.get("id") if isinstance(user_obj, dict) else getattr(user_obj, "id", None)
+# ==========================
+# UPDATE PROFILE ENDPOINT
+# ==========================
+@router.put("/auth/profile")
+async def update_profile(req: UpdateProfileRequest, request: Request):
+    """Update user profile"""
+    
+    auth_header = request.headers.get("Authorization")
+    if not auth_header or not auth_header.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="No authentication token provided")
+    
+    token = auth_header.split(" ")[1]
+    
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        user_id: str = payload.get("sub")
+    except JWTError:
+        raise HTTPException(status_code=401, detail="Invalid token")
+    
+    update_data = {}
+    if req.full_name:
+        update_data["full_name"] = req.full_name.strip()
+    
+    if not update_data:
+        raise HTTPException(status_code=400, detail="No fields to update")
+    
+    update_data["updated_at"] = datetime.utcnow().isoformat()
+    
+    result = await users_collection.update_one(
+        {"id": user_id},
+        {"$set": update_data}
+    )
+    
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    user = await users_collection.find_one({"id": user_id})
+    return {"user": format_user_response(user), "message": "Profile updated successfully"}
 
-        # Get user profile
-        user_response = supabase.table("users").select("*").eq("id", user_id).execute()
+# ==========================
+# LOGOUT ENDPOINT
+# ==========================
+@router.post("/auth/logout", response_model=MessageResponse)
+async def logout(request: Request):
+    """Logout user"""
+    # In a stateless JWT system, logout is handled client-side by removing the token
+    return MessageResponse(message="Logged out successfully")
 
-        if not user_response.data:
-            # Return user data from Supabase Auth if profile is missing
-            return {
-                "user": {
-                    "id": user_id,
-                    "email": user_obj.get("email") if isinstance(user_obj, dict) else getattr(user_obj, "email", None),
-                    "full_name": (user_obj.get("user_metadata") or {}).get("full_name") if isinstance(user_obj, dict) else getattr(user_obj, "user_metadata", {}).get("full_name")
-                }
-            }
-
-        return {"user": user_response.data[0]}
-
-    except HTTPException:
-        raise
-    except Exception as e:
-        print(f"[auth.me] exception: {repr(e)}")
-        raise HTTPException(status_code=401, detail="Unauthorized")
-
+# ==========================
+# RESEND VERIFICATION EMAIL
+# ==========================
+@router.post("/auth/resend-verification")
+async def resend_verification(email: EmailStr):
+    """Resend verification email"""
+    
+    user = await users_collection.find_one({"email": email.lower()})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    if user.get("email_verified"):
+        raise HTTPException(status_code=400, detail="Email already verified")
+    
+    # Generate new token
+    verification_token = generate_verification_token()
+    
+    await users_collection.update_one(
+        {"id": user["id"]},
+        {"$set": {"verification_token": verification_token}}
+    )
+    
+    print(f"[VERIFICATION] Resend for {email} - Token: {verification_token}")
+    
+    return MessageResponse(
+        message=f"Verification token sent. Token: {verification_token}"
+    )
 
 # ==========================
 # DEPENDENCY FOR PROTECTED ROUTES
 # ==========================
 async def get_current_user_id(request: Request) -> str:
-    """Dependency to inject user_id into protected routes"""
-    token = getattr(request.state, "token", None)
-    if not token:
-        auth_header = request.headers.get("Authorization")
-        if auth_header and auth_header.startswith("Bearer "):
-            token = auth_header.split(" ")[1]
-
-    if not token:
+    auth_header = request.headers.get("Authorization")
+    if not auth_header or not auth_header.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="No token provided")
-
+    
+    token = auth_header.split(" ")[1]
+    
     try:
-        user_resp = supabase.auth.get_user(token)
-        user_id = None
-        if isinstance(user_resp, dict):
-            data = user_resp.get("data")
-            user_id = data.get("user", {}).get("id") if data else None
-        else:
-            user_id = user_resp.user.id
-
-        if not user_id:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        user_id: str = payload.get("sub")
+        if user_id is None:
             raise HTTPException(status_code=401, detail="Invalid token")
         return user_id
-    except Exception as e:
-        print(f"[get_current_user_id] exception: {repr(e)}")
+    except JWTError:
         raise HTTPException(status_code=401, detail="Unauthorized")

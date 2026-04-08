@@ -9,6 +9,7 @@ import { ToastContainer } from "./ui/toast";
 import Forecasts from "./page/forecasts";
 import AuthModal from "./page/AuthModal";
 import { AuthProvider, useAuth } from "./page/AuthModal";
+import { DataProvider } from "./context/DataContext";
 
 function Router() {
   const [location, setLocation] = useLocation();
@@ -16,7 +17,6 @@ function Router() {
   const [showAuthModal, setShowAuthModal] = useState(false);
 
   useEffect(() => {
-    // Redirect authenticated users away from auth modal
     if (isAuthenticated && location === "/") {
       // Allow staying on the same page
     }
@@ -43,26 +43,34 @@ function Router() {
           )}
         </Route>
         <Route path="/Sales">
-          <div className="app-container">
-            <Sidebar />
-            <main className="main-content">
-              <div className="salesdata-container">
-                <Salesdata />
-              </div>
-            </main>
-            <ToastContainer />
-          </div>
+          {!isAuthenticated ? (
+            <Landing onLoginClick={() => setShowAuthModal(true)} />
+          ) : (
+            <div className="app-container">
+              <Sidebar />
+              <main className="main-content">
+                <div className="page-container">
+                  <Salesdata />
+                </div>
+              </main>
+              <ToastContainer />
+            </div>
+          )}
         </Route>
         <Route path="/Forecasts">
-          <div className="app-container">
-            <Sidebar />
-            <main className="main-content">
-              <div className="salesdata-container">
-                <Forecasts />
-              </div>
-            </main>
-            <ToastContainer />
-          </div>
+          {!isAuthenticated ? (
+            <Landing onLoginClick={() => setShowAuthModal(true)} />
+          ) : (
+            <div className="app-container">
+              <Sidebar />
+              <main className="main-content">
+                <div className="page-container">
+                  <Forecasts />
+                </div>
+              </main>
+              <ToastContainer />
+            </div>
+          )}
         </Route>
       </Switch>
 
@@ -74,7 +82,9 @@ function Router() {
 function App() {
   return (
     <AuthProvider>
-      <Router />
+      <DataProvider>
+        <Router />
+      </DataProvider>
     </AuthProvider>
   );
 }

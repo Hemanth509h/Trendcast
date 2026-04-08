@@ -94,6 +94,31 @@
   animation: shake 0.3s ease-in-out;
 }
 
+.auth-success-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+  padding: 12px 16px;
+  background-color: #efe;
+  border-left: 4px solid #6f6;
+  border-radius: 6px;
+  color: #363;
+  font-size: 14px;
+  animation: slideDown 0.3s ease-in-out;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 @keyframes shake {
   0%,
   100% {
@@ -124,6 +149,13 @@
   font-size: 14px;
   font-weight: 600;
   color: #333;
+}
+
+.password-hint {
+  font-size: 12px;
+  color: #999;
+  margin-top: 4px;
+  display: block;
 }
 
 .input-wrapper {
@@ -173,6 +205,10 @@
   cursor: pointer;
   transition: all 0.3s ease;
   margin-top: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
 }
 
 .auth-submit-btn:hover:not(:disabled) {
@@ -183,6 +219,37 @@
 .auth-submit-btn:disabled {
   opacity: 0.7;
   cursor: not-allowed;
+}
+
+.spinner {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.auth-back-btn {
+  padding: 10px 16px;
+  background: #f0f0f0;
+  color: #666;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  margin-top: 8px;
+}
+
+.auth-back-btn:hover {
+  background: #e0e0e0;
+  color: #333;
 }
 
 .auth-modal-footer {
@@ -197,7 +264,7 @@
   color: #666;
 }
 
-.auth-toggle-btn {
+.auth-modal-footer button {
   background: none;
   border: none;
   color: #667eea;
@@ -207,7 +274,7 @@
   transition: color 0.3s ease;
 }
 
-.auth-toggle-btn:hover {
+.auth-modal-footer button:hover {
   color: #764ba2;
   text-decoration: underline;
 }
