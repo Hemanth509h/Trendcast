@@ -12,12 +12,11 @@ import {
   User,
   LogIn,
 } from "lucide-react";
-import { useAuth } from "../page/AuthModal";
+import { useAuth } from "../context/AuthContext";
 import "./ui.css";
 
 const path = [
-  { label: "Dashboard", icon: LayoutDashboard, href: "/" },
-  { label: "Sales Data", icon: TableProperties, href: "/Sales" },
+  { label: "Sales Data", icon: TableProperties, href: "/" },
   { label: "Forecasts", icon: TrendingUp, href: "/Forecasts" }
 ];
 

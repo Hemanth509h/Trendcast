@@ -1,7 +1,6 @@
-import React, { createContext, useContext, useState, useCallback } from "react";
-import { useAuth } from "../page/AuthModal";
-
-const DataContext = createContext();
+import React, { useContext, useState, useCallback } from "react";
+import { useAuth } from "./AuthContext";
+import { DataContext } from "./Contexts";
 
 export const DataProvider = ({ children }) => {
   // Sales Data State

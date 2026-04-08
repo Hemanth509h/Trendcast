@@ -75,7 +75,9 @@ async def upload_file(request: Request, file: UploadFile = File(...)):
         if df.empty:
             raise HTTPException(status_code=400, detail="File is empty")
 
-        data = df.to_dict(orient="records")
+        import json
+        # Convert via JSON to natively handle numpy types (int64) and NaNs which PyMongo cannot serialize
+        data = json.loads(df.to_json(orient="records"))
         
         # Create upload record
         upload_id = str(uuid.uuid4())

@@ -82,10 +82,16 @@ const Dashboard = () => {
             {
               label: 'Sales Trend',
               data: sortedData.map(item => Number(item[salesKey]) || 0),
-              borderColor: 'rgb(99, 102, 241)',
-              backgroundColor: 'rgba(99, 102, 241, 0.5)',
-              tension: 0.3,
+              borderColor: '#06b6d4',
+              backgroundColor: 'rgba(6, 182, 212, 0.2)',
+              tension: 0.4,
               fill: true,
+              pointBackgroundColor: '#06b6d4',
+              pointBorderColor: '#fff',
+              pointHoverBackgroundColor: '#fff',
+              pointHoverBorderColor: '#06b6d4',
+              pointRadius: 4,
+              pointHoverRadius: 6,
             },
           ],
         });
@@ -176,10 +182,25 @@ const Dashboard = () => {
                 responsive: true,
                 maintainAspectRatio: false,
                 plugins: {
-                  legend: { display: false }
+                  legend: { display: false },
+                  tooltip: {
+                    mode: 'index',
+                    intersect: false,
+                    backgroundColor: 'rgba(9, 9, 11, 0.9)',
+                    titleColor: '#f8fafc',
+                    bodyColor: '#f8fafc',
+                    borderColor: 'rgba(255,255,255,0.1)',
+                    borderWidth: 1,
+                  }
                 },
                 scales: {
-                  y: { beginAtZero: true }
+                  x: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#a1a1aa' } },
+                  y: { beginAtZero: true, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#a1a1aa' } }
+                },
+                interaction: {
+                  mode: 'nearest',
+                  axis: 'x',
+                  intersect: false
                 }
               }} 
             />

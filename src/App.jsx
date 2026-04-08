@@ -3,12 +3,11 @@ import "./app.css";
 import { Sidebar } from "./ui/sidebar";
 import { Route, Switch, useLocation } from "wouter";
 import Salesdata from "./page/salesdata";
-import Dashboard from "./page/Dashboard";
 import Landing from "./page/Landing";
 import { ToastContainer } from "./ui/toast";
 import Forecasts from "./page/forecasts";
 import AuthModal from "./page/AuthModal";
-import { AuthProvider, useAuth } from "./page/AuthModal";
+import { AuthProvider, useAuth } from "./context/AuthContext";
 import { DataProvider } from "./context/DataContext";
 
 function Router() {
@@ -30,19 +29,6 @@ function Router() {
     <>
       <Switch>
         <Route path="/">
-          {!isAuthenticated ? (
-            <Landing onLoginClick={() => setShowAuthModal(true)} />
-          ) : (
-            <div className="app-container">
-              <Sidebar />
-              <main className="main-content">
-                <Dashboard />
-              </main>
-              <ToastContainer />
-            </div>
-          )}
-        </Route>
-        <Route path="/Sales">
           {!isAuthenticated ? (
             <Landing onLoginClick={() => setShowAuthModal(true)} />
           ) : (
