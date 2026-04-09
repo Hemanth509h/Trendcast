@@ -11,25 +11,13 @@ import {
   Eye,
   RefreshCw,
 } from "lucide-react";
-<<<<<<< HEAD
-
-import "./css/salesdata.css";
-=======
 import "./salesdata.css";
->>>>>>> hemanth
 import Dialog from "../ui/Dialog";
 import "../ui/ui.css";
 import { toast } from "../ui/toast";
 import { useData } from "../context/DataContext";
 
 export default function Salesdata() {
-<<<<<<< HEAD
-  const [isopenimportdialog, setisopenimportdialog] = useState(false);
-  const [isopenadddialog, setisopenadddialog] = useState(false);
-  const [isuploding, setisuploding] = useState(false);
-  const [formData, setFormData] = useState({});
-  const [dataloading, setDataloading] = useState(false);
-=======
   const {
     uploads,
     currentUpload,
@@ -50,7 +38,6 @@ export default function Salesdata() {
   const [isAddRecordOpen, setIsAddRecordOpen] = useState(false);
   const [uploadFile, setUploadFile] = useState(null);
   const [isUploading, setIsUploading] = useState(false);
->>>>>>> hemanth
   const [searchTerm, setSearchTerm] = useState("");
   const deferredSearchTerm = useDeferredValue(searchTerm);
   const [sortConfig, setSortConfig] = useState({ key: null, direction: "asc" });
@@ -84,17 +71,8 @@ export default function Salesdata() {
     try {
       await uploadSalesFile(file);
       toast("File uploaded successfully!", "success");
-<<<<<<< HEAD
-
-      setisopenimportdialog(false);
-      setimportedfile(null);
-      // Clear sessionStorage to refresh data
-      sessionStorage.removeItem("salesdata");
-      fatchdata();
-=======
       setIsUploadOpen(false);
       setUploadFile(null);
->>>>>>> hemanth
     } catch (error) {
       toast(`Upload failed: ${error.message}`, "error");
     } finally {
