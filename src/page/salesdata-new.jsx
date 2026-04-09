@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useDeferredValue } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import {
   Plus,
   Trash2,
@@ -9,27 +9,14 @@ import {
   ArrowUpDown,
   Download,
   Eye,
-  RefreshCw,
 } from "lucide-react";
-<<<<<<< HEAD
-
-import "./css/salesdata.css";
-=======
 import "./salesdata.css";
->>>>>>> hemanth
 import Dialog from "../ui/Dialog";
 import "../ui/ui.css";
 import { toast } from "../ui/toast";
 import { useData } from "../context/DataContext";
 
 export default function Salesdata() {
-<<<<<<< HEAD
-  const [isopenimportdialog, setisopenimportdialog] = useState(false);
-  const [isopenadddialog, setisopenadddialog] = useState(false);
-  const [isuploding, setisuploding] = useState(false);
-  const [formData, setFormData] = useState({});
-  const [dataloading, setDataloading] = useState(false);
-=======
   const {
     uploads,
     currentUpload,
@@ -42,7 +29,6 @@ export default function Salesdata() {
     deleteRecordFromSales,
     exportSales,
     clearSalesError,
-    clearCurrentUpload,
     addRecordToSales,
   } = useData();
 
@@ -50,13 +36,9 @@ export default function Salesdata() {
   const [isAddRecordOpen, setIsAddRecordOpen] = useState(false);
   const [uploadFile, setUploadFile] = useState(null);
   const [isUploading, setIsUploading] = useState(false);
->>>>>>> hemanth
   const [searchTerm, setSearchTerm] = useState("");
-  const deferredSearchTerm = useDeferredValue(searchTerm);
   const [sortConfig, setSortConfig] = useState({ key: null, direction: "asc" });
-  const deferredSortConfig = useDeferredValue(sortConfig);
   const [newRecord, setNewRecord] = useState({});
-  const [currentPage, setCurrentPage] = useState(1);
 
   // Load sales on component mount
   useEffect(() => {
@@ -84,17 +66,8 @@ export default function Salesdata() {
     try {
       await uploadSalesFile(file);
       toast("File uploaded successfully!", "success");
-<<<<<<< HEAD
-
-      setisopenimportdialog(false);
-      setimportedfile(null);
-      // Clear sessionStorage to refresh data
-      sessionStorage.removeItem("salesdata");
-      fatchdata();
-=======
       setIsUploadOpen(false);
       setUploadFile(null);
->>>>>>> hemanth
     } catch (error) {
       toast(`Upload failed: ${error.message}`, "error");
     } finally {
@@ -115,7 +88,7 @@ export default function Salesdata() {
   // Handle delete record
   const handleDeleteRecord = async (recordIndex) => {
     if (!currentUpload) return;
-
+    
     if (window.confirm("Delete this record?")) {
       const uId = currentUpload.id || currentUpload._id;
       const success = await deleteRecordFromSales(uId, recordIndex);
@@ -152,48 +125,25 @@ export default function Salesdata() {
   // Filter and sort records
   const filteredRecords = useMemo(() => {
     if (!currentUpload?.records) return [];
+    
+    let filtered = currentUpload.records.filter((record) => {
+      const searchStr = searchTerm.toLowerCase();
+      return Object.values(record).some((val) =>
+        String(val).toLowerCase().includes(searchStr)
+      );
+    });
 
-    let filtered = currentUpload.records;
-
-    // Only run the heavy search logic if the user is actually searching
-    if (deferredSearchTerm) {
-      const searchStr = deferredSearchTerm.toLowerCase();
-      filtered = filtered.filter((record) => {
-        for (const key in record) {
-          if (Object.prototype.hasOwnProperty.call(record, key)) {
-            const val = record[key];
-            if (val != null && String(val).toLowerCase().includes(searchStr)) {
-              return true;
-            }
-          }
-        }
-        return false;
-      });
-    }
-
-    if (deferredSortConfig.key) {
-      // Must create a shallow copy before sorting to avoid mutating the original dataset
-      filtered = [...filtered].sort((a, b) => {
-        const aVal = a[deferredSortConfig.key];
-        const bVal = b[deferredSortConfig.key];
+    if (sortConfig.key) {
+      filtered.sort((a, b) => {
+        const aVal = a[sortConfig.key];
+        const bVal = b[sortConfig.key];
         const comparison = aVal < bVal ? -1 : 1;
-        return deferredSortConfig.direction === "asc" ? comparison : -comparison;
+        return sortConfig.direction === "asc" ? comparison : -comparison;
       });
     }
 
     return filtered;
-  }, [currentUpload?.records, deferredSearchTerm, deferredSortConfig]);
-
-  // Reset to first page when data or search changes
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [deferredSearchTerm, currentUpload]);
-
-  // Paginated records (50 per page)
-  const paginatedRecords = useMemo(() => {
-    const start = (currentPage - 1) * 50;
-    return filteredRecords.slice(start, start + 50);
-  }, [filteredRecords, currentPage]);
+  }, [currentUpload?.records, searchTerm, sortConfig]);
 
   if (isLoadingSales && uploads.length === 0) {
     return (
@@ -208,24 +158,14 @@ export default function Salesdata() {
     <div className="salesdata-page">
       <div className="page-header">
         <h1>Sales Data Management</h1>
-        <div style={{ display: "flex", gap: "10px" }}>
-          <button
-            className="btn-secondary"
-            onClick={() => fetchAllSales(true)}
-            disabled={isLoadingSales || isUploading}
-          >
-            <RefreshCw size={18} className={isLoadingSales ? "spinner" : ""} />
-            Refresh Data
-          </button>
-          <button
-            className="btn-primary"
-            onClick={() => setIsUploadOpen(true)}
-            disabled={isUploading}
-          >
-            <Upload size={18} />
-            Upload File
-          </button>
-        </div>
+        <button
+          className="btn-primary"
+          onClick={() => setIsUploadOpen(true)}
+          disabled={isUploading}
+        >
+          <Upload size={18} />
+          Upload File
+        </button>
       </div>
 
       {/* Uploads List */}
@@ -278,7 +218,7 @@ export default function Salesdata() {
           <div className="section-header">
             <button
               className="btn-secondary"
-              onClick={() => clearCurrentUpload()}
+              onClick={() => setCurrentUpload(null)}
             >
               ← Back to Uploads
             </button>
@@ -318,7 +258,7 @@ export default function Salesdata() {
                           key: col,
                           direction:
                             sortConfig.key === col &&
-                              sortConfig.direction === "asc"
+                            sortConfig.direction === "asc"
                               ? "desc"
                               : "asc",
                         })
@@ -348,57 +288,28 @@ export default function Salesdata() {
                     </td>
                   </tr>
                 ) : (
-                  paginatedRecords.map((record, idx) => {
-                    // Map index back to original array for proper deletion if filtered/sorted
-                    // Actually, simpler to just pass the real index or handle it differently, 
-                    // but we will use the current dataset index for now
-                    const realIdx = (currentPage - 1) * 50 + idx;
-                    return (
-                      <tr key={realIdx}>
-                        {currentUpload.columns?.map((col) => (
-                          <td key={`${realIdx}-${col}`}>
-                            {String(record[col]).substring(0, 50)}
-                          </td>
-                        ))}
-                        <td className="action-cell">
-                          <button
-                            className="btn-icon-danger"
-                            onClick={() => handleDeleteRecord(realIdx)}
-                            title="Delete record"
-                          >
-                            <Trash2 size={16} />
-                          </button>
+                  filteredRecords.map((record, idx) => (
+                    <tr key={idx}>
+                      {currentUpload.columns?.map((col) => (
+                        <td key={`${idx}-${col}`}>
+                          {String(record[col]).substring(0, 50)}
                         </td>
-                      </tr>
-                    )
-                  })
+                      ))}
+                      <td className="action-cell">
+                        <button
+                          className="btn-icon-danger"
+                          onClick={() => handleDeleteRecord(idx)}
+                          title="Delete record"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </td>
+                    </tr>
+                  ))
                 )}
               </tbody>
             </table>
           </div>
-
-          {/* Pagination Controls */}
-          {filteredRecords.length > 0 && (
-            <div className="pagination-controls" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '1rem', padding: '1rem', background: 'var(--bg-glass)', borderRadius: 'var(--radius-md)' }}>
-              <button
-                className="btn-secondary"
-                disabled={currentPage === 1}
-                onClick={() => setCurrentPage(p => p - 1)}
-              >
-                Previous
-              </button>
-              <span style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>
-                Page {currentPage} of {Math.ceil(filteredRecords.length / 50) || 1}
-              </span>
-              <button
-                className="btn-secondary"
-                disabled={currentPage >= Math.ceil(filteredRecords.length / 50)}
-                onClick={() => setCurrentPage(p => p + 1)}
-              >
-                Next
-              </button>
-            </div>
-          )}
         </div>
       )}
 
@@ -449,12 +360,22 @@ export default function Salesdata() {
               type="text"
               placeholder={col}
               value={newRecord[col] || ""}
-              onChange={(e) => setNewRecord({ ...newRecord, [col]: e.target.value })}
+              onChange={(e) =>
+                setNewRecord({ ...newRecord, [col]: e.target.value })
+              }
+              className="dialog-input"
             />
           ))}
-          <div className="dialog-footer">
-            <button className="btn btn-ghost" onClick={() => setIsAddRecordOpen(false)}>Cancel</button>
-            <button className="btn btn-primary" onClick={handleAddRecord}>Add Record</button>
+          <div className="dialog-actions">
+            <button
+              className="btn-secondary"
+              onClick={() => setIsAddRecordOpen(false)}
+            >
+              Cancel
+            </button>
+            <button className="btn-primary" onClick={handleAddRecord}>
+              Add Record
+            </button>
           </div>
         </div>
       </Dialog>

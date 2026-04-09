@@ -1,44 +1,20 @@
 import React from "react";
-export default function Dialog({ isopen, isclose, title, children }) {
+import "./ui.css"; 
+
+export default function Dialog({ isOpen, onClose, title, children }) {
+  if (!isOpen) return null;
+
   return (
-    <>
-      {isopen && (
-        <div
-          className="dialog-overlay"
-          onClick={isclose}
-          style={{
-            position: "fixed",
-            top: 0,
-            left: 0,
-            width: "100%",
-            height: "100%",
-            backgroundColor: "rgba(0, 0, 0, 0.5)",
-            zIndex: 1000,
-            display: "flex",
-            justifyContent: "center",
-            alignItems: "center",
-          }}
-        >
-          <div
-            className="dialog-box"
-            style={{
-              backgroundColor: "#fff",
-              padding: "20px",
-              borderRadius: "8px",
-              minWidth: "300px",
-              maxWidth: "600px",
-            }}
-          >
-            <div
-              className="header-dialog"
-              onClick={(e) => e.stopPropagation()} // prevent close on click inside
-            >
-              <h2 style={{textAlign:"center"}}>{title}</h2>
-              <div className="dialog-body" style={{}}>{children}</div>
-            </div>
-          </div>
+    <div className="dialog-overlay" onClick={onClose}>
+      <div 
+        className="dialog-box" 
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="header-dialog">
+          {title && <h2 style={{textAlign:"center", color: "#fff"}}>{title}</h2>}
+          <div className="dialog-body">{children}</div>
         </div>
-      )}
-    </>
+      </div>
+    </div>
   );
 }

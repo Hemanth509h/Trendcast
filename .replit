@@ -1,7 +1,6 @@
 modules = ["nodejs-20", "web", "python-3.11"]
 [agent]
 expertMode = true
-integrations = ["python_openai_ai_integrations:1.0.0", "python_gemini_ai_integrations:1.0.0"]
 
 [nix]
 channel = "stable-25_05"
@@ -17,11 +16,29 @@ author = "agent"
 
 [[workflows.workflow.tasks]]
 task = "workflow.run"
-args = "Backend API"
+args = "Start application"
 
 [[workflows.workflow.tasks]]
 task = "workflow.run"
+args = "Backend API"
+
+<<<<<<< HEAD
+[[workflows.workflow.tasks]]
+task = "workflow.run"
 args = "Start application"
+=======
+[[workflows.workflow]]
+name = "Start application"
+author = "agent"
+
+[workflows.workflow.metadata]
+outputType = "webview"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "npm run dev"
+waitForPort = 5000
+>>>>>>> hemanth
 
 [[workflows.workflow]]
 name = "Backend API"
@@ -32,6 +49,7 @@ outputType = "console"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
+<<<<<<< HEAD
 args = "python backend/main.py"
 waitForPort = 8000
 
@@ -47,21 +65,16 @@ waitForPort = 5000
 [workflows.workflow.metadata]
 outputType = "webview"
 
+=======
+args = "cd backend && python -m uvicorn main:app --host 0.0.0.0 --port 8000 --reload"
+waitForPort = 8000
+
+>>>>>>> hemanth
 [[ports]]
 localPort = 5000
 externalPort = 80
 
-[[ports]]
-localPort = 8000
-externalPort = 8000
-
 [deployment]
 deploymentTarget = "autoscale"
-build = ["bash", "-c", "npm run build"]
-publicDir = "dist"
 run = ["gunicorn", "--bind", "0.0.0.0:5000", "main:app"]
-
-[userenv]
-
-[userenv.shared]
-GEMINI_API_KEY = "AIzaSyDPDCtMnQhydFFlSYD6Ztj_anxcHJbnu5o"
+build = ["npm", "run", "build"]

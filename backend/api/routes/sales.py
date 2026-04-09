@@ -1,104 +1,336 @@
 import os
-import json
 import pandas as pd
 import io
-import time
-from fastapi import APIRouter, UploadFile, File, HTTPException, Response
+import uuid
+from bson import ObjectId
+from fastapi import APIRouter, UploadFile, File, HTTPException, Response, Request
+from dotenv import load_dotenv
+from pydantic import BaseModel
+from jose import JWTError, jwt
+from datetime import datetime
+from ..database import sales_collection
+
+load_dotenv()
 
 router = APIRouter()
 
-DATA_FILE = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "data.json")
+# ==========================
+# AUTH CONFIG
+# ==========================
+SECRET_KEY = os.getenv("SECRET_KEY", "your-secret-key-here")
+ALGORITHM = os.getenv("ALGORITHM", "HS256")
 
-@router.post("/upload")
-async def upload_file(file: UploadFile = File(...)):
+# ==========================
+# REQUEST MODELS
+# ==========================
+class SalesRecord(BaseModel):
+    data: dict
+
+class UpdateRecordRequest(BaseModel):
+    record_id: str
+    updates: dict
+
+# ==========================
+# HELPER: GET USER ID FROM REQUEST
+# ==========================
+async def get_user_id_from_request(request: Request) -> str:
+    """Extract and verify user_id from request token"""
+    auth_header = request.headers.get("Authorization")
+    if not auth_header or not auth_header.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="No authentication token provided")
+    
+    token = auth_header.split(" ")[1]
+    
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        user_id: str = payload.get("sub")
+        if user_id is None:
+            raise HTTPException(status_code=401, detail="Invalid token")
+        return user_id
+    except JWTError:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
+# ==========================
+# UPLOAD FILE
+# ==========================
+@router.post("/sales/upload")
+async def upload_file(request: Request, file: UploadFile = File(...)):
+    """Upload CSV/Excel file for sales forecasting"""
+    
     if not file.filename:
-        raise HTTPException(status_code=400, detail="No selected file")
+        raise HTTPException(status_code=400, detail="No file selected")
+
+    user_id = await get_user_id_from_request(request)
     
-    contents = await file.read()
-    if file.filename.endswith('.csv'):
-        df = pd.read_csv(io.BytesIO(contents))
-    elif file.filename.endswith('.xlsx'):
-        df = pd.read_excel(io.BytesIO(contents))
-    else:
-        raise HTTPException(status_code=400, detail="Invalid file type. Use CSV or Excel.")
-    
-    data = df.to_dict(orient='records')
     try:
-        with open(DATA_FILE, 'w') as f:
-            json.dump({"data": data,
-                       "filename": file.filename,
-                        "record_count": len(data)}, f)
-            f.flush()
-            os.fsync(f.fileno())
-        return {"message": "File uploaded and data stored successfully" }
+        contents = await file.read()
+
+        if file.filename.endswith('.csv'):
+            df = pd.read_csv(io.BytesIO(contents))
+        elif file.filename.endswith('.xlsx'):
+            df = pd.read_excel(io.BytesIO(contents))
+        else:
+            raise HTTPException(status_code=400, detail="File must be CSV or Excel format")
+
+        # Validate data
+        if df.empty:
+            raise HTTPException(status_code=400, detail="File is empty")
+
+        import json
+        # Convert via JSON to natively handle numpy types (int64) and NaNs which PyMongo cannot serialize
+        data = json.loads(df.to_json(orient="records"))
+        
+        # Create upload record
+        upload_id = str(uuid.uuid4())
+        sales_data = {
+            "id": upload_id,
+            "user_id": user_id,
+            "filename": file.filename,
+            "records": data,
+            "record_count": len(data),
+            "columns": list(df.columns),
+            "created_at": datetime.utcnow().isoformat(),
+            "updated_at": datetime.utcnow().isoformat(),
+        }
+
+        result = await sales_collection.insert_one(sales_data)
+        
+        return {
+            "id": upload_id,
+            "filename": file.filename,
+            "record_count": len(data),
+            "records": data,
+            "columns": list(df.columns),
+            "message": "File uploaded successfully"
+        }
+    
+    except HTTPException:
+        raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to store data: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Upload failed: {str(e)}")
 
-@router.get("/salesdata")
-async def get_sales_data():
-    if not os.path.exists(DATA_FILE):
-        raise HTTPException(status_code=404, detail="Data file not found")
-    with open(DATA_FILE, 'r') as f:
-        data = json.load(f)
-    return data
-
-@router.get("/delete")
-async def delete_data():
+# ==========================
+# GET ALL UPLOADS FOR USER
+# ==========================
+@router.get("/sales")
+async def get_all_sales(request: Request):
+    """Get all sales uploads for authenticated user"""
+    
+    user_id = await get_user_id_from_request(request)
+    
     try:
-        with open(DATA_FILE, "w") as f:
-            json.dump({"data": []}, f, indent=4)
-        return {"message": "Deleted successfully", "type": "success"}
+        # Return everything so the frontend caches it all avoiding ANY future API calls per the user constraint
+        uploads = await sales_collection.find(
+            {"user_id": user_id}
+        ).to_list(None)
+        
+        for upload in uploads:
+            upload["_id"] = str(upload["_id"])
+        
+        return {
+            "uploads": uploads,
+            "count": len(uploads)
+        }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=f"Error fetching sales data: {str(e)}")
 
-@router.post("/addrecord")
-async def add_record(record: dict):
-    if not os.path.exists(DATA_FILE):
-        raise HTTPException(status_code=404, detail="Data file not found")
+# ==========================
+# GET SPECIFIC UPLOAD
+# ==========================
+@router.get("/sales/{upload_id}")
+async def get_specific_upload(upload_id: str, request: Request, limit: int = None):
+    """Get specific sales upload"""
     
-    with open(DATA_FILE, 'r') as f:
-        data = json.load(f)
+    user_id = await get_user_id_from_request(request)
     
-    if 'data' not in data:
-        data['data'] = []
-    data['data'].append(record)
+    try:
+        query = {"user_id": user_id}
+        or_conds = [{"id": upload_id}]
+        try:
+            or_conds.append({"_id": ObjectId(upload_id)})
+        except Exception:
+            pass
+        query["$or"] = or_conds
+        
+        projection = None
+        if limit is not None and limit > 0:
+            projection = {"records": {"$slice": limit}}
+            
+        upload = await sales_collection.find_one(query, projection)
+        
+        if not upload:
+            raise HTTPException(status_code=404, detail="Sales data not found")
+        
+        upload["_id"] = str(upload["_id"])
+        
+        import math
+        def replace_nan(obj):
+            if isinstance(obj, float) and math.isnan(obj):
+                return None
+            if isinstance(obj, dict):
+                return {k: replace_nan(v) for k, v in obj.items()}
+            if isinstance(obj, list):
+                return [replace_nan(v) for v in obj]
+            return obj
+            
+        return replace_nan(upload)
     
-    with open(DATA_FILE, 'w') as f:
-        json.dump(data, f)
-    
-    return {"message": "Record added successfully"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error fetching data: {str(e)}")
 
-@router.post("/deleterecord")
-async def delete_record(request_data: dict):
-    record_to_delete = request_data.get("record")
-    if not os.path.exists(DATA_FILE):
-        raise HTTPException(status_code=404, detail="Data file not found")
+# ==========================
+# DELETE UPLOAD
+# ==========================
+@router.delete("/sales/{upload_id}")
+async def delete_upload(upload_id: str, request: Request):
+    """Delete specific sales upload"""
     
-    with open(DATA_FILE, 'r') as f:
-        data = json.load(f)
+    user_id = await get_user_id_from_request(request)
     
-    data['data'] = [record for record in data['data'] if record != record_to_delete]
+    try:
+        query = {"user_id": user_id}
+        or_conds = [{"id": upload_id}]
+        try:
+            or_conds.append({"_id": ObjectId(upload_id)})
+        except Exception:
+            pass
+        query["$or"] = or_conds
+        
+        result = await sales_collection.delete_one(query)
+        
+        if result.deleted_count == 0:
+            raise HTTPException(status_code=404, detail="Sales data not found")
+        
+        return {"message": "Sales data deleted successfully"}
     
-    with open(DATA_FILE, 'w') as f:
-        json.dump(data, f)
-    
-    return {"message": "Record deleted successfully"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error deleting data: {str(e)}")
 
-@router.get("/export")
-async def export_data():
-    if not os.path.exists(DATA_FILE):
-        raise HTTPException(status_code=404, detail="Data file not found")
+# ==========================
+# ADD RECORD TO UPLOAD
+# ==========================
+@router.post("/sales/{upload_id}/records")
+async def add_record(upload_id: str, record: SalesRecord, request: Request):
+    """Add a new record to existing sales upload"""
     
-    with open(DATA_FILE, 'r') as f:
-        data = json.load(f)
+    user_id = await get_user_id_from_request(request)
     
-    df = pd.DataFrame(data['data'])
-    output = io.StringIO()
-    df.to_csv(output, index=False)
-    csv_data = output.getvalue()
+    try:
+        query = {"user_id": user_id}
+        or_conds = [{"id": upload_id}]
+        try:
+            or_conds.append({"_id": ObjectId(upload_id)})
+        except Exception:
+            pass
+        query["$or"] = or_conds
+        
+        upload = await sales_collection.find_one(query)
+        
+        if not upload:
+            raise HTTPException(status_code=404, detail="Sales data not found")
+        
+        # Add new record
+        new_records = upload["records"] + [record.data]
+        
+        await sales_collection.update_one(
+            {"_id": upload["_id"]},
+            {"$set": {
+                "records": new_records,
+                "record_count": len(new_records),
+                "updated_at": datetime.utcnow().isoformat()
+            }}
+        )
+        
+        return {"message": "Record added successfully"}
     
-    return Response(
-        content=csv_data,
-        media_type="text/csv",
-        headers={"Content-Disposition": "attachment;filename=sales_data.csv"}
-    )
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error adding record: {str(e)}")
+
+# ==========================
+# DELETE RECORD FROM UPLOAD
+# ==========================
+@router.delete("/sales/{upload_id}/records/{record_index}")
+async def delete_record(upload_id: str, record_index: int, request: Request):
+    """Delete a specific record from upload"""
+    
+    user_id = await get_user_id_from_request(request)
+    
+    try:
+        query = {"user_id": user_id}
+        or_conds = [{"id": upload_id}]
+        try:
+            or_conds.append({"_id": ObjectId(upload_id)})
+        except Exception:
+            pass
+        query["$or"] = or_conds
+        
+        upload = await sales_collection.find_one(query)
+        
+        if not upload:
+            raise HTTPException(status_code=404, detail="Sales data not found")
+        
+        if record_index < 0 or record_index >= len(upload["records"]):
+            raise HTTPException(status_code=400, detail="Invalid record index")
+        
+        # Remove record
+        updated_records = upload["records"][:record_index] + upload["records"][record_index+1:]
+        
+        await sales_collection.update_one(
+            {"_id": upload["_id"]},
+            {"$set": {
+                "records": updated_records,
+                "record_count": len(updated_records),
+                "updated_at": datetime.utcnow().isoformat()
+            }}
+        )
+        
+        return {"message": "Record deleted successfully"}
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error deleting record: {str(e)}")
+
+# ==========================
+# EXPORT UPLOAD
+# ==========================
+@router.get("/sales/{upload_id}/export")
+async def export_sales(upload_id: str, request: Request):
+    """Export sales data as CSV"""
+    
+    user_id = await get_user_id_from_request(request)
+    
+    try:
+        query = {"user_id": user_id}
+        or_conds = [{"id": upload_id}]
+        try:
+            or_conds.append({"_id": ObjectId(upload_id)})
+        except Exception:
+            pass
+        query["$or"] = or_conds
+        
+        upload = await sales_collection.find_one(query)
+        
+        if not upload:
+            raise HTTPException(status_code=404, detail="Sales data not found")
+        
+        df = pd.DataFrame(upload["records"])
+        output = io.StringIO()
+        df.to_csv(output, index=False)
+        
+        return Response(
+            content=output.getvalue(),
+            media_type="text/csv",
+            headers={"Content-Disposition": f"attachment; filename={upload['filename']}"}
+        )
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error exporting data: {str(e)}")
