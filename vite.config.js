@@ -9,7 +9,7 @@ export default defineConfig({
     allowedHosts: true,
     proxy: {
       "/api": {
-        target: "http://localhost:8000",
+        target: "https://trendcast.onrender.com",
         changeOrigin: true,
         secure: false,
       },

@@ -60,8 +60,7 @@ export const AuthProvider = ({ children }) => {
       
       return { 
         success: true, 
-        requiresVerification: true,
-        verificationToken: data.user.message?.split(": ")[1] || ""
+        requiresVerification: false
       };
     } catch (err) {
       const msg = err.message || "Error during registration";

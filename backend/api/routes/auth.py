@@ -133,8 +133,8 @@ async def register(req: SignUpRequest):
         "email": req.email.lower(),
         "hashed_password": hashed_password,
         "full_name": req.full_name.strip(),
-        "email_verified": False,  # User must verify email
-        "verification_token": verification_token,
+        "email_verified": True,  # Automatically verified
+        "verification_token": None,
         "created_at": datetime.now(timezone.utc).isoformat(),
         "updated_at": datetime.now(timezone.utc).isoformat(),
     }
@@ -148,12 +148,10 @@ async def register(req: SignUpRequest):
             detail=f"Failed to create user in database: {str(e)}"
         )
     
-    # Generate token (unverified user can still access with limitations)
-    access_token = create_access_token(data={"sub": user_id, "verified": False})
+    # Generate token (verified user)
+    access_token = create_access_token(data={"sub": user_id, "verified": True})
     
-    # In production, send verification email here
-    # For now, we log it for testing
-    print(f"[VERIFICATION] User {req.email} - Token: {verification_token}")
+    print(f"[REGISTER] User {req.email} registered and verified automatically")
     
     return AuthResponse(
         access_token=access_token,
@@ -161,8 +159,8 @@ async def register(req: SignUpRequest):
             "id": user_id,
             "email": user_data["email"],
             "full_name": user_data["full_name"],
-            "email_verified": False,
-            "message": f"Account created! Verification token: {verification_token}"
+            "email_verified": True,
+            "message": "Account created and verified successfully!"
         }
     )
 
