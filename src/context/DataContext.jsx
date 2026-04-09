@@ -41,19 +41,24 @@ export const DataProvider = ({ children }) => {
     }
   }, [getToken]);
 
-  const fetchSalesById = useCallback(async (uploadId) => {
+  const fetchSalesById = useCallback(async (uploadId, options = {}) => {
+    const { limit = null, updateState = true } = options;
     setIsLoadingSales(true);
     setSalesError(null);
     
     try {
       const token = getToken();
-      const response = await fetch(`/api/sales/${uploadId}`, {
+      const url = limit ? `/api/sales/${uploadId}?limit=${limit}` : `/api/sales/${uploadId}`;
+      const response = await fetch(url, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
       if (!response.ok) throw new Error("Failed to fetch sales data");
       const data = await response.json();
-      setCurrentUpload(data);
+      
+      if (updateState) {
+        setCurrentUpload(data);
+      }
       return data;
     } catch (error) {
       setSalesError(error.message);
@@ -287,8 +292,12 @@ export const DataProvider = ({ children }) => {
 
   const clearSalesError = () => setSalesError(null);
   const clearForecastError = () => setForecastError(null);
+  
+  const clearCurrentUpload = useCallback(() => {
+    setCurrentUpload(null);
+  }, []);
 
-  const value = {
+  const value = React.useMemo(() => ({
     // Sales
     uploads,
     currentUpload,
@@ -302,6 +311,7 @@ export const DataProvider = ({ children }) => {
     deleteRecordFromSales,
     exportSales,
     clearSalesError,
+    clearCurrentUpload,
 
     // Forecasts
     forecasts,
@@ -312,7 +322,27 @@ export const DataProvider = ({ children }) => {
     fetchForecasts,
     deleteForecast,
     clearForecastError,
-  };
+  }), [
+    uploads,
+    currentUpload,
+    isLoadingSales,
+    salesError,
+    fetchAllSales,
+    fetchSalesById,
+    uploadSalesFile,
+    deleteSales,
+    addRecordToSales,
+    deleteRecordFromSales,
+    exportSales,
+    clearCurrentUpload,
+    forecasts,
+    currentForecast,
+    isLoadingForecast,
+    forecastError,
+    generateForecast,
+    fetchForecasts,
+    deleteForecast
+  ]);
 
   return (
     <DataContext.Provider value={value}>

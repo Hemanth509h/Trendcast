@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect, useDeferredValue } from "react";
 import {
   Plus,
   Trash2,
@@ -29,6 +29,7 @@ export default function Salesdata() {
     deleteRecordFromSales,
     exportSales,
     clearSalesError,
+    clearCurrentUpload,
     addRecordToSales,
   } = useData();
 
@@ -37,8 +38,11 @@ export default function Salesdata() {
   const [uploadFile, setUploadFile] = useState(null);
   const [isUploading, setIsUploading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+  const deferredSearchTerm = useDeferredValue(searchTerm);
   const [sortConfig, setSortConfig] = useState({ key: null, direction: "asc" });
+  const deferredSortConfig = useDeferredValue(sortConfig);
   const [newRecord, setNewRecord] = useState({});
+  const [currentPage, setCurrentPage] = useState(1);
 
   // Load sales on component mount
   useEffect(() => {
@@ -86,7 +90,7 @@ export default function Salesdata() {
   // Handle delete record
   const handleDeleteRecord = async (recordIndex) => {
     if (!currentUpload) return;
-    
+
     if (window.confirm("Delete this record?")) {
       const success = await deleteRecordFromSales(currentUpload.id, recordIndex);
       if (success) {
@@ -121,25 +125,48 @@ export default function Salesdata() {
   // Filter and sort records
   const filteredRecords = useMemo(() => {
     if (!currentUpload?.records) return [];
-    
-    let filtered = currentUpload.records.filter((record) => {
-      const searchStr = searchTerm.toLowerCase();
-      return Object.values(record).some((val) =>
-        String(val).toLowerCase().includes(searchStr)
-      );
-    });
 
-    if (sortConfig.key) {
-      filtered.sort((a, b) => {
-        const aVal = a[sortConfig.key];
-        const bVal = b[sortConfig.key];
+    let filtered = currentUpload.records;
+
+    // Only run the heavy search logic if the user is actually searching
+    if (deferredSearchTerm) {
+      const searchStr = deferredSearchTerm.toLowerCase();
+      filtered = filtered.filter((record) => {
+        for (const key in record) {
+          if (Object.prototype.hasOwnProperty.call(record, key)) {
+            const val = record[key];
+            if (val != null && String(val).toLowerCase().includes(searchStr)) {
+              return true;
+            }
+          }
+        }
+        return false;
+      });
+    }
+
+    if (deferredSortConfig.key) {
+      // Must create a shallow copy before sorting to avoid mutating the original dataset
+      filtered = [...filtered].sort((a, b) => {
+        const aVal = a[deferredSortConfig.key];
+        const bVal = b[deferredSortConfig.key];
         const comparison = aVal < bVal ? -1 : 1;
-        return sortConfig.direction === "asc" ? comparison : -comparison;
+        return deferredSortConfig.direction === "asc" ? comparison : -comparison;
       });
     }
 
     return filtered;
-  }, [currentUpload?.records, searchTerm, sortConfig]);
+  }, [currentUpload?.records, deferredSearchTerm, deferredSortConfig]);
+
+  // Reset to first page when data or search changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [deferredSearchTerm, currentUpload]);
+
+  // Paginated records (50 per page)
+  const paginatedRecords = useMemo(() => {
+    const start = (currentPage - 1) * 50;
+    return filteredRecords.slice(start, start + 50);
+  }, [filteredRecords, currentPage]);
 
   if (isLoadingSales && uploads.length === 0) {
     return (
@@ -211,7 +238,7 @@ export default function Salesdata() {
           <div className="section-header">
             <button
               className="btn-secondary"
-              onClick={() => setCurrentUpload(null)}
+              onClick={() => clearCurrentUpload()}
             >
               ← Back to Uploads
             </button>
@@ -251,7 +278,7 @@ export default function Salesdata() {
                           key: col,
                           direction:
                             sortConfig.key === col &&
-                            sortConfig.direction === "asc"
+                              sortConfig.direction === "asc"
                               ? "desc"
                               : "asc",
                         })
@@ -281,28 +308,57 @@ export default function Salesdata() {
                     </td>
                   </tr>
                 ) : (
-                  filteredRecords.map((record, idx) => (
-                    <tr key={idx}>
-                      {currentUpload.columns?.map((col) => (
-                        <td key={`${idx}-${col}`}>
-                          {String(record[col]).substring(0, 50)}
+                  paginatedRecords.map((record, idx) => {
+                    // Map index back to original array for proper deletion if filtered/sorted
+                    // Actually, simpler to just pass the real index or handle it differently, 
+                    // but we will use the current dataset index for now
+                    const realIdx = (currentPage - 1) * 50 + idx;
+                    return (
+                      <tr key={realIdx}>
+                        {currentUpload.columns?.map((col) => (
+                          <td key={`${realIdx}-${col}`}>
+                            {String(record[col]).substring(0, 50)}
+                          </td>
+                        ))}
+                        <td className="action-cell">
+                          <button
+                            className="btn-icon-danger"
+                            onClick={() => handleDeleteRecord(realIdx)}
+                            title="Delete record"
+                          >
+                            <Trash2 size={16} />
+                          </button>
                         </td>
-                      ))}
-                      <td className="action-cell">
-                        <button
-                          className="btn-icon-danger"
-                          onClick={() => handleDeleteRecord(idx)}
-                          title="Delete record"
-                        >
-                          <Trash2 size={16} />
-                        </button>
-                      </td>
-                    </tr>
-                  ))
+                      </tr>
+                    )
+                  })
                 )}
               </tbody>
             </table>
           </div>
+
+          {/* Pagination Controls */}
+          {filteredRecords.length > 0 && (
+            <div className="pagination-controls" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '1rem', padding: '1rem', background: 'var(--bg-glass)', borderRadius: 'var(--radius-md)' }}>
+              <button
+                className="btn-secondary"
+                disabled={currentPage === 1}
+                onClick={() => setCurrentPage(p => p - 1)}
+              >
+                Previous
+              </button>
+              <span style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>
+                Page {currentPage} of {Math.ceil(filteredRecords.length / 50) || 1}
+              </span>
+              <button
+                className="btn-secondary"
+                disabled={currentPage >= Math.ceil(filteredRecords.length / 50)}
+                onClick={() => setCurrentPage(p => p + 1)}
+              >
+                Next
+              </button>
+            </div>
+          )}
         </div>
       )}
 

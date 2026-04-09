@@ -2,6 +2,7 @@ import os
 import pandas as pd
 import io
 import uuid
+from bson import ObjectId
 from fastapi import APIRouter, UploadFile, File, HTTPException, Response, Request
 from dotenv import load_dotenv
 from pydantic import BaseModel
@@ -117,7 +118,11 @@ async def get_all_sales(request: Request):
     user_id = await get_user_id_from_request(request)
     
     try:
-        uploads = await sales_collection.find({"user_id": user_id}).to_list(None)
+        # Crucial Performance Fix: Exclude the massive 'records' array when fetching the list of uploads
+        uploads = await sales_collection.find(
+            {"user_id": user_id},
+            {"records": 0}
+        ).to_list(None)
         
         for upload in uploads:
             upload["_id"] = str(upload["_id"])
@@ -133,22 +138,42 @@ async def get_all_sales(request: Request):
 # GET SPECIFIC UPLOAD
 # ==========================
 @router.get("/sales/{upload_id}")
-async def get_specific_upload(upload_id: str, request: Request):
+async def get_specific_upload(upload_id: str, request: Request, limit: int = None):
     """Get specific sales upload"""
     
     user_id = await get_user_id_from_request(request)
     
     try:
-        upload = await sales_collection.find_one({
-            "id": upload_id,
-            "user_id": user_id
-        })
+        query = {"user_id": user_id}
+        or_conds = [{"id": upload_id}]
+        try:
+            or_conds.append({"_id": ObjectId(upload_id)})
+        except Exception:
+            pass
+        query["$or"] = or_conds
+        
+        projection = None
+        if limit is not None and limit > 0:
+            projection = {"records": {"$slice": limit}}
+            
+        upload = await sales_collection.find_one(query, projection)
         
         if not upload:
             raise HTTPException(status_code=404, detail="Sales data not found")
         
         upload["_id"] = str(upload["_id"])
-        return upload
+        
+        import math
+        def replace_nan(obj):
+            if isinstance(obj, float) and math.isnan(obj):
+                return None
+            if isinstance(obj, dict):
+                return {k: replace_nan(v) for k, v in obj.items()}
+            if isinstance(obj, list):
+                return [replace_nan(v) for v in obj]
+            return obj
+            
+        return replace_nan(upload)
     
     except HTTPException:
         raise
@@ -165,10 +190,15 @@ async def delete_upload(upload_id: str, request: Request):
     user_id = await get_user_id_from_request(request)
     
     try:
-        result = await sales_collection.delete_one({
-            "id": upload_id,
-            "user_id": user_id
-        })
+        query = {"user_id": user_id}
+        or_conds = [{"id": upload_id}]
+        try:
+            or_conds.append({"_id": ObjectId(upload_id)})
+        except Exception:
+            pass
+        query["$or"] = or_conds
+        
+        result = await sales_collection.delete_one(query)
         
         if result.deleted_count == 0:
             raise HTTPException(status_code=404, detail="Sales data not found")
@@ -190,10 +220,15 @@ async def add_record(upload_id: str, record: SalesRecord, request: Request):
     user_id = await get_user_id_from_request(request)
     
     try:
-        upload = await sales_collection.find_one({
-            "id": upload_id,
-            "user_id": user_id
-        })
+        query = {"user_id": user_id}
+        or_conds = [{"id": upload_id}]
+        try:
+            or_conds.append({"_id": ObjectId(upload_id)})
+        except Exception:
+            pass
+        query["$or"] = or_conds
+        
+        upload = await sales_collection.find_one(query)
         
         if not upload:
             raise HTTPException(status_code=404, detail="Sales data not found")
@@ -202,7 +237,7 @@ async def add_record(upload_id: str, record: SalesRecord, request: Request):
         new_records = upload["records"] + [record.data]
         
         await sales_collection.update_one(
-            {"id": upload_id},
+            {"_id": upload["_id"]},
             {"$set": {
                 "records": new_records,
                 "record_count": len(new_records),
@@ -227,10 +262,15 @@ async def delete_record(upload_id: str, record_index: int, request: Request):
     user_id = await get_user_id_from_request(request)
     
     try:
-        upload = await sales_collection.find_one({
-            "id": upload_id,
-            "user_id": user_id
-        })
+        query = {"user_id": user_id}
+        or_conds = [{"id": upload_id}]
+        try:
+            or_conds.append({"_id": ObjectId(upload_id)})
+        except Exception:
+            pass
+        query["$or"] = or_conds
+        
+        upload = await sales_collection.find_one(query)
         
         if not upload:
             raise HTTPException(status_code=404, detail="Sales data not found")
@@ -242,7 +282,7 @@ async def delete_record(upload_id: str, record_index: int, request: Request):
         updated_records = upload["records"][:record_index] + upload["records"][record_index+1:]
         
         await sales_collection.update_one(
-            {"id": upload_id},
+            {"_id": upload["_id"]},
             {"$set": {
                 "records": updated_records,
                 "record_count": len(updated_records),
@@ -267,10 +307,15 @@ async def export_sales(upload_id: str, request: Request):
     user_id = await get_user_id_from_request(request)
     
     try:
-        upload = await sales_collection.find_one({
-            "id": upload_id,
-            "user_id": user_id
-        })
+        query = {"user_id": user_id}
+        or_conds = [{"id": upload_id}]
+        try:
+            or_conds.append({"_id": ObjectId(upload_id)})
+        except Exception:
+            pass
+        query["$or"] = or_conds
+        
+        upload = await sales_collection.find_one(query)
         
         if not upload:
             raise HTTPException(status_code=404, detail="Sales data not found")

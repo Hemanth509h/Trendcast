@@ -24,6 +24,7 @@ ALGORITHM = os.getenv("ALGORITHM", "HS256")
 # REQUEST MODEL
 # ==========================
 class ForecastRequest(BaseModel):
+    upload_id: str
     column: str = "Weekly_Sales"
     horizon: int = 30
     model: str = "sarima"
@@ -52,190 +53,141 @@ async def get_user_id_from_request(request: Request) -> str:
 # ==========================
 # FORECAST API
 # ==========================
-@router.post("/generateforecast")
+@router.post("/forecasts/generate")
 async def generate_forecast(req: ForecastRequest, request: Request):
     try:
         user_id = await get_user_id_from_request(request)
         
-        # Get latest data for this user
-        dataset = await sales_collection.find_one(
-            {"user_id": user_id},
-            sort=[("_id", -1)]
-        )
+        from bson import ObjectId
+        query = {"user_id": user_id}
+        or_conds = [{"id": req.upload_id}]
+        try:
+            or_conds.append({"_id": ObjectId(req.upload_id)})
+        except Exception:
+            pass
+        query["$or"] = or_conds
         
+        dataset = await sales_collection.find_one(query)
+
+        if not dataset:
+            raise HTTPException(status_code=400, detail="No data available")
+
         column = req.column
         horizon = req.horizon
 
-        if not dataset:
-            raise HTTPException(status_code=400, detail="No data available in MongoDB")
+        df = pd.DataFrame(dataset.get('records', []))
+        if df.empty or 'Date' not in df.columns or column not in df.columns:
+            raise HTTPException(status_code=400, detail="Insufficient data for forecasting")
 
-        df = pd.DataFrame(dataset.get("data", []))
-
-        if df.empty or "Date" not in df.columns or column not in df.columns:
-            raise HTTPException(
-                status_code=400,
-                detail="Insufficient data for forecasting"
-            )
-
-        # ==========================
-        # PREPROCESSING
-        # ==========================
-        df["Date"] = pd.to_datetime(df["Date"], dayfirst=True, errors="coerce")
-        df = df.dropna(subset=["Date", column])
-
+        # parse dates using day-first interpretation to avoid warnings on ambiguous formats
+        df['Date'] = pd.to_datetime(df['Date'], dayfirst=True, errors='coerce')
+        
+        df = df.dropna(subset=['Date', column])
         if df.empty:
-            raise HTTPException(
-                status_code=400,
-                detail="No valid data found in selected column"
-            )
-
-        df = df.sort_values("Date").reset_index(drop=True)
-
-        # Aggregate daily
-        series = (
-            df.groupby("Date")[column]
-            .sum()
-            .resample("D")
-            .sum()
-            .fillna(0)
-        )
-
+            raise HTTPException(status_code=400, detail="No valid data found in selected column")
+            
+        df = df.sort_values('Date').reset_index(drop=True)
+        
+        # Aggregate to daily to ensure regular time series
+        series = df.groupby('Date')[column].sum().resample('D').sum().fillna(0)
+        
         if len(series) < 2:
-            raise HTTPException(
-                status_code=400,
-                detail="Not enough data points for forecasting"
-            )
+            raise HTTPException(status_code=400, detail="Not enough data points for time series forecasting")
 
-        # ==========================
-        # FORECAST FUNCTION
-        # ==========================
+        # helper for forecasting a single time series, returns tuple
         def forecast_series(series_obj, horizon_val):
+            # farcast and fitted values using same logic as before
             try:
                 if len(series_obj) > 14:
-                    model = SARIMAX(
-                        series_obj,
-                        order=(1, 1, 1),
-                        seasonal_order=(1, 1, 1, 7),
-                        enforce_stationarity=False,
-                        enforce_invertibility=False,
-                    )
+                    mdl = SARIMAX(series_obj, order=(1, 1, 1), seasonal_order=(1, 1, 1, 7), 
+                                  enforce_stationarity=False, enforce_invertibility=False)
                 else:
-                    model = SARIMAX(
-                        series_obj,
-                        order=(1, 1, 1),
-                        enforce_stationarity=False,
-                        enforce_invertibility=False,
-                    )
-
-                model_fit = model.fit(disp=False)
-                forecast = model_fit.get_forecast(steps=horizon_val).predicted_mean
-                fitted = model_fit.fittedvalues
-
+                    mdl = SARIMAX(series_obj, order=(1, 1, 1), enforce_stationarity=False, 
+                                  enforce_invertibility=False)
+                mdl_fit = mdl.fit(disp=False)
+                fcst = mdl_fit.get_forecast(steps=horizon_val).predicted_mean
+                hist_pred = mdl_fit.fittedvalues
             except Exception:
+                # fallback
                 from statsmodels.tsa.holtwinters import ExponentialSmoothing
+                mdl = ExponentialSmoothing(series_obj, trend='add', seasonal='add', seasonal_periods=7)
+                mdl_fit = mdl.fit()
+                fcst = mdl_fit.forecast(horizon_val)
+                hist_pred = mdl_fit.fittedvalues
+            return fcst, hist_pred
 
-                model = ExponentialSmoothing(
-                    series_obj,
-                    trend="add",
-                    seasonal="add",
-                    seasonal_periods=7,
-                )
-                model_fit = model.fit()
-                forecast = model_fit.forecast(horizon_val)
-                fitted = model_fit.fittedvalues
-
-            return forecast, fitted
-
-        # ==========================
-        # METRICS FUNCTION
-        # ==========================
-        def compute_metrics(actual, predicted):
-            mae = mean_absolute_error(actual, predicted)
-            mse = mean_squared_error(actual, predicted)
-            r2 = r2_score(actual, predicted)
-
+        def compute_metrics(series_obj, hist_pred):
+            actual = np.array(series_obj)
+            pred = np.array(hist_pred)
+            mae_val = mean_absolute_error(actual, pred)
+            mse_val = mean_squared_error(actual, pred)
+            r2_val = r2_score(actual, pred)
+            mask = actual != 0
+            if np.any(mask):
+                mape = np.mean(np.abs((actual[mask] - pred[mask]) / actual[mask]))
+                accuracy = max(0, min(100, (1 - mape) * 100))
+            else:
+                accuracy = 0
             return {
-                "mae": float(mae),
-                "mse": float(mse),
-                "r2": float(r2),
-                "rmse": float(np.sqrt(mse)),
-                "accuracy": float(max(0, min(100, r2 * 100))),
+                "mae": float(mae_val),
+                "mse": float(mse_val),
+                "r2": float(r2_val),
+                "rmse": float(np.sqrt(mse_val)),
+                "accuracy": float(accuracy)
             }
 
-        # ==========================
-        # MAIN FORECAST
-        # ==========================
-        forecast_values, historical_pred = forecast_series(series, horizon)
-        metrics = compute_metrics(series, historical_pred)
+        full_forecast, full_hist_pred = forecast_series(series, horizon)
+        metrics_dict = compute_metrics(series, full_hist_pred)
 
         response_payload = {
-            "forecast": [max(0, float(v)) for v in forecast_values.tolist()],
-            "dates": [
-                d.strftime("%Y-%m-%d")
-                for d in pd.date_range(
-                    start=series.index[-1] + pd.Timedelta(days=1),
-                    periods=horizon,
-                    freq="D",
-                )
-            ],
+            "forecast": [max(0, float(v)) for v in full_forecast.tolist()],
+            "dates": [d.strftime('%Y-%m-%d') for d in pd.date_range(start=series.index[-1] + pd.Timedelta(days=1), periods=horizon, freq='D')],
             "historical": {
-                "dates": series.index.strftime("%Y-%m-%d").tolist(),
+                "dates": series.index.strftime('%Y-%m-%d').tolist(),
                 "values": series.values.tolist(),
-                "trend": historical_pred.tolist(),
+                "trend": full_hist_pred.tolist()
             },
-            "metrics": metrics,
-            "is_grouped": False,
+            "metrics": metrics_dict,
+            "is_grouped": False
         }
 
-        # ==========================
-        # GROUPING SUPPORT
-        # ==========================
+        # handle grouping if requested
         if req.group_by and req.group_by in df.columns:
             groups_dict = {}
-
-            for group_value, group_df in df.groupby(req.group_by):
-                group_df = group_df.dropna(subset=["Date", column])
-                if group_df.empty:
+            for grp_val, grp_df in df.groupby(req.group_by):
+                # prepare subgroup series
+                sg = grp_df.copy()
+                sg = sg.dropna(subset=['Date', column])
+                if sg.empty:
                     continue
-
-                sub_series = (
-                    group_df.groupby("Date")[column]
-                    .sum()
-                    .resample("D")
-                    .sum()
-                    .fillna(0)
-                )
-
-                if len(sub_series) < 2:
+                sg = sg.sort_values('Date')
+                subseries = sg.groupby('Date')[column].sum().resample('D').sum().fillna(0)
+                if len(subseries) < 2:
                     continue
-
-                group_forecast, group_pred = forecast_series(sub_series, horizon)
-
-                groups_dict[str(group_value)] = {
-                    "historical": sub_series.values.tolist(),
-                    "forecast": [
-                        max(0, float(v)) for v in group_forecast.tolist()
-                    ],
-                    "dates": sub_series.index.strftime("%Y-%m-%d").tolist(),
+                grp_fcst, grp_hist_pred = forecast_series(subseries, horizon)
+                groups_dict[str(grp_val)] = {
+                    "historical": subseries.values.tolist(),
+                    "forecast": [max(0, float(v)) for v in grp_fcst.tolist()],
+                    "dates": subseries.index.strftime('%Y-%m-%d').tolist()
                 }
 
+            # attach grouping info to response
             response_payload["is_grouped"] = True
             response_payload["groups"] = groups_dict
 
         # SAVE FORECAST TO DATABASE
         forecast_record = {
             "user_id": user_id,
+            "upload_id": req.upload_id,
             "column": column,
             "horizon": horizon,
             "model": req.model,
             "forecast_data": response_payload,
             "created_at": datetime.utcnow().isoformat(),
         }
-        
         await forecasts_collection.insert_one(forecast_record)
 
         return response_payload
-
     except Exception as e:
         import traceback
         print(traceback.format_exc())
