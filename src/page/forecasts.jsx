@@ -70,6 +70,18 @@ export default function Forecasts() {
 
   const [isFetchingDataset, setIsFetchingDataset] = useState(false);
 
+  // Automatically select the dataset if coming from sales page
+  useEffect(() => {
+    if (currentUpload && !selectedUploadId) {
+      const uId = currentUpload.id || currentUpload._id;
+      setSelectedUploadId(uId);
+      setSelectedUpload(currentUpload);
+      if (currentUpload.columns?.length > 0) {
+        setSelectedColumn(currentUpload.columns[0]);
+      }
+    }
+  }, [currentUpload, selectedUploadId]);
+
   // Load upload data when selected
   const handleSelectUpload = async (uploadId) => {
     setSelectedUploadId(uploadId);
@@ -81,6 +93,15 @@ export default function Forecasts() {
       return;
     }
 
+    // If it's the currently cached upload, no need to refetch
+    if (currentUpload && (currentUpload.id === uploadId || currentUpload._id === uploadId)) {
+      setSelectedUpload(currentUpload);
+      if (currentUpload.columns?.length > 0) {
+        setSelectedColumn(currentUpload.columns[0]);
+      }
+      return;
+    }
+
     setIsFetchingDataset(true);
     const data = await fetchSalesById(uploadId, { limit: 1, updateState: false });
     setIsFetchingDataset(false);
@@ -88,8 +109,6 @@ export default function Forecasts() {
     if (data) {
       setSelectedUpload(data);
       if (data.columns?.length > 0) {
-        // Select first numeric column prioritizing ones that seem metric-like
-        // or just the first column
         setSelectedColumn(data.columns[0]);
       }
     } else {
@@ -303,9 +322,20 @@ export default function Forecasts() {
 
   return (
     <div className="forecast-container">
-      <div className="forecast-header">
-        <h1>Sales Forecasting</h1>
-        <p>Generate time series forecasts from your sales data</p>
+      <div className="forecast-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+        <div>
+          <h1>Sales Forecasting</h1>
+          <p>Generate time series forecasts from your sales data</p>
+        </div>
+        <button
+          className="btn-secondary"
+          onClick={() => fetchAllSales(true)}
+          disabled={isLoadingSales}
+          style={{ alignSelf: "center" }}
+        >
+          <RefreshCw size={18} className={isLoadingSales ? "spinner" : ""} />
+          Refresh Datasets
+        </button>
       </div>
 
       {/* Config Panel */}

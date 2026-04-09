@@ -28,7 +28,7 @@
   color: #ffffff;
   letter-spacing: -0.02em;
   margin: 0;
-  text-shadow: 0 0 20px rgba(255, 255, 255, 0.1);
+  text-shadow: 0 0 20px var(--primary-glow);
 }
 
 .uploads-section h2, .section-header h2 {
@@ -193,7 +193,7 @@
 }
 
 .records-table th:hover {
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--surface-alpha);
 }
 
 .header-cell {
@@ -206,7 +206,7 @@
   padding: 1rem;
   color: #ffffff;
   font-size: 0.875rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+  border-bottom: 1px solid var(--border-light);
   white-space: nowrap;
   transition: background 0.2s;
 }
@@ -216,7 +216,7 @@
 }
 
 .records-table tr:hover td {
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--surface-alpha-hover);
 }
 
 .empty-cell {
@@ -269,7 +269,7 @@
 }
 
 .dialog-close:hover {
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--surface-alpha-hover);
   color: #fff;
 }
 
@@ -282,7 +282,7 @@
   width: 100%;
   padding: 1rem;
   background: rgba(0, 0, 0, 0.2);
-  border: 2px dashed rgba(255, 255, 255, 0.1);
+  border: 2px dashed var(--border-focus);
   border-radius: var(--radius-md);
   color: #fff;
   margin-bottom: 1.5rem;

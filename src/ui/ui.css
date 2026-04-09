@@ -30,7 +30,7 @@
   font-size: 24px;
   font-weight: 700;
   margin: 0;
-  background: linear-gradient(135deg, #fff 0%, var(--text-muted) 100%);
+  background: linear-gradient(135deg, var(--text-main) 0%, var(--text-muted) 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   letter-spacing: -0.5px;
@@ -78,8 +78,8 @@ hr {
 }
 
 .menu-item:hover {
-  color: #fff;
-  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-main);
+  background: var(--border-light);
   border-color: var(--border-light);
   transform: translateX(4px);
 }
@@ -99,7 +99,7 @@ hr {
 
 .menu-item-active {
   background: linear-gradient(90deg, rgba(99, 102, 241, 0.15) 0%, transparent 100%);
-  color: #fff;
+  color: var(--text-main);
   border-left: 3px solid var(--primary);
   border-radius: 0 var(--radius-md) var(--radius-md) 0;
 }
@@ -120,7 +120,7 @@ hr {
   align-items: center;
   gap: 14px;
   padding: 12px;
-  background: rgba(0, 0, 0, 0.2);
+  background: var(--surface-alpha);
   border: 1px solid var(--border-light);
   border-radius: var(--radius-md);
   margin-bottom: 16px;
@@ -147,7 +147,7 @@ hr {
   margin: 0;
   font-size: 14px;
   font-weight: 600;
-  color: #fff;
+  color: var(--text-main);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -203,16 +203,16 @@ hr {
   font-weight: 500;
   cursor: pointer;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--surface-alpha);
   border: 1px solid var(--border-light);
-  color: #fff;
+  color: var(--text-main);
   backdrop-filter: blur(8px);
 }
 
 .btn:hover {
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--border-focus);
   transform: translateY(-2px);
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
 }
 
 .btn:active {

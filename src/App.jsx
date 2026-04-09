@@ -9,6 +9,7 @@ import Forecasts from "./page/forecasts";
 import AuthModal from "./page/AuthModal";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { DataProvider } from "./context/DataContext";
+import { ThemeProvider } from "./context/ThemeContext";
 
 function Router() {
   const [location, setLocation] = useLocation();
@@ -69,7 +70,9 @@ function App() {
   return (
     <AuthProvider>
       <DataProvider>
-        <Router />
+        <ThemeProvider>
+          <Router />
+        </ThemeProvider>
       </DataProvider>
     </AuthProvider>
   );

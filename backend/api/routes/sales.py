@@ -99,6 +99,7 @@ async def upload_file(request: Request, file: UploadFile = File(...)):
             "id": upload_id,
             "filename": file.filename,
             "record_count": len(data),
+            "records": data,
             "columns": list(df.columns),
             "message": "File uploaded successfully"
         }
@@ -118,10 +119,9 @@ async def get_all_sales(request: Request):
     user_id = await get_user_id_from_request(request)
     
     try:
-        # Crucial Performance Fix: Exclude the massive 'records' array when fetching the list of uploads
+        # Return everything so the frontend caches it all avoiding ANY future API calls per the user constraint
         uploads = await sales_collection.find(
-            {"user_id": user_id},
-            {"records": 0}
+            {"user_id": user_id}
         ).to_list(None)
         
         for upload in uploads:

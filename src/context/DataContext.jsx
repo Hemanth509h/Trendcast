@@ -3,11 +3,48 @@ import { useAuth } from "./AuthContext";
 import { DataContext } from "./Contexts";
 
 export const DataProvider = ({ children }) => {
-  // Sales Data State
-  const [uploads, setUploads] = useState([]);
-  const [currentUpload, setCurrentUpload] = useState(null);
+  const [uploads, setUploads] = useState(() => {
+    try {
+      const saved = sessionStorage.getItem("trendcast_uploads");
+      if (saved) return JSON.parse(saved);
+    } catch (e) {
+      console.warn("Failed to load uploads from session storage", e);
+    }
+    return [];
+  });
+  
+  // Sync uploads array to sessionStorage
+  React.useEffect(() => {
+    try {
+      sessionStorage.setItem("trendcast_uploads", JSON.stringify(uploads));
+    } catch (e) {
+      console.warn("Uploads array too large for session storage", e);
+    }
+  }, [uploads]);
+  const [currentUpload, setCurrentUpload] = useState(() => {
+    try {
+      const saved = sessionStorage.getItem("trendcast_current_upload");
+      if (saved) return JSON.parse(saved);
+    } catch (e) {
+      console.warn("Failed to load dataset from session storage", e);
+    }
+    return null;
+  });
   const [isLoadingSales, setIsLoadingSales] = useState(false);
   const [salesError, setSalesError] = useState(null);
+
+  // Sync currentUpload to sessionStorage
+  React.useEffect(() => {
+    try {
+      if (currentUpload) {
+        sessionStorage.setItem("trendcast_current_upload", JSON.stringify(currentUpload));
+      } else {
+        sessionStorage.removeItem("trendcast_current_upload");
+      }
+    } catch (e) {
+      console.warn("Dataset too large for session storage or error saving", e);
+    }
+  }, [currentUpload]);
 
   // Forecast State
   const [forecasts, setForecasts] = useState([]);
@@ -19,7 +56,9 @@ export const DataProvider = ({ children }) => {
 
   // ==================== SALES OPERATIONS ====================
 
-  const fetchAllSales = useCallback(async () => {
+  const fetchAllSales = useCallback(async (force = false) => {
+    if (!force && uploads.length > 0) return uploads;
+    
     setIsLoadingSales(true);
     setSalesError(null);
     
@@ -39,34 +78,39 @@ export const DataProvider = ({ children }) => {
     } finally {
       setIsLoadingSales(false);
     }
-  }, [getToken]);
+  }, [getToken, uploads.length]);
 
   const fetchSalesById = useCallback(async (uploadId, options = {}) => {
-    const { limit = null, updateState = true } = options;
+    const { updateState = true } = options;
+    
     setIsLoadingSales(true);
-    setSalesError(null);
     
     try {
-      const token = getToken();
-      const url = limit ? `/api/sales/${uploadId}?limit=${limit}` : `/api/sales/${uploadId}`;
-      const response = await fetch(url, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      if (!response.ok) throw new Error("Failed to fetch sales data");
-      const data = await response.json();
-      
-      if (updateState) {
-        setCurrentUpload(data);
-      }
-      return data;
-    } catch (error) {
-      setSalesError(error.message);
-      return null;
+        // ALWAYS use cached uploads array first!
+        const existing = uploads.find(u => u.id === uploadId || u._id === uploadId);
+        if (existing && existing.records) {
+            if (updateState) setCurrentUpload(existing);
+            return existing;
+        }
+        
+        // Session storage fallback
+        const saved = sessionStorage.getItem("trendcast_current_upload");
+        if (saved) {
+            const parsed = JSON.parse(saved);
+            if (parsed.id === uploadId || parsed._id === uploadId) {
+                if (updateState) setCurrentUpload(parsed);
+                return parsed;
+            }
+        }
+    } catch (e) {
+        console.warn("Error reading cache natively", e);
     } finally {
-      setIsLoadingSales(false);
+        setIsLoadingSales(false);
     }
-  }, [getToken]);
+    
+    toast("Dataset not available locally! Unable to fetch per constraints.", "error");
+    return null;
+  }, [uploads]);
 
   const uploadSalesFile = useCallback(async (file) => {
     setIsLoadingSales(true);
@@ -89,8 +133,8 @@ export const DataProvider = ({ children }) => {
       }
 
       const data = await response.json();
-      // Refresh the sales list
-      await fetchAllSales();
+      // Instantly inject the newly uploaded dataset into local storage directly!
+      setUploads(prev => [...prev, data]);
       return data;
     } catch (error) {
       setSalesError(error.message);
@@ -98,7 +142,7 @@ export const DataProvider = ({ children }) => {
     } finally {
       setIsLoadingSales(false);
     }
-  }, [getToken, fetchAllSales]);
+  }, [getToken]);
 
   const deleteSales = useCallback(async (uploadId) => {
     setIsLoadingSales(true);
@@ -113,10 +157,11 @@ export const DataProvider = ({ children }) => {
 
       if (!response.ok) throw new Error("Failed to delete sales");
       
-      if (currentUpload?.id === uploadId) {
+      if (currentUpload?.id === uploadId || currentUpload?._id === uploadId) {
         setCurrentUpload(null);
       }
-      await fetchAllSales();
+      // Mutate local state instantly to skip slow API updates
+      setUploads(prev => prev.filter(u => u.id !== uploadId && u._id !== uploadId));
       return true;
     } catch (error) {
       setSalesError(error.message);
@@ -143,8 +188,15 @@ export const DataProvider = ({ children }) => {
 
       if (!response.ok) throw new Error("Failed to add record");
       
-      // Refresh current upload
-      await fetchSalesById(uploadId);
+      // Instant local state mutation without fetching
+      setUploads(prev => prev.map(u => {
+        if (u.id === uploadId || u._id === uploadId) {
+            const updated = { ...u, records: [...(u.records || []), record], record_count: (u.record_count || 0) + 1 };
+            setCurrentUpload(prevUpload => prevUpload ? updated : null);
+            return updated;
+        }
+        return u;
+      }));
       return true;
     } catch (error) {
       setSalesError(error.message);
@@ -167,8 +219,17 @@ export const DataProvider = ({ children }) => {
 
       if (!response.ok) throw new Error("Failed to delete record");
       
-      // Refresh current upload
-      await fetchSalesById(uploadId);
+      // Instant local state mutation without fetching
+      setUploads(prev => prev.map(u => {
+        if (u.id === uploadId || u._id === uploadId) {
+            const newRecords = [...(u.records || [])];
+            newRecords.splice(recordIndex, 1);
+            const updated = { ...u, records: newRecords, record_count: newRecords.length };
+            setCurrentUpload(prevUpload => prevUpload ? updated : null);
+            return updated;
+        }
+        return u;
+      }));
       return true;
     } catch (error) {
       setSalesError(error.message);

@@ -9,6 +9,7 @@ import {
   ArrowUpDown,
   Download,
   Eye,
+  RefreshCw,
 } from "lucide-react";
 import "./salesdata.css";
 import Dialog from "../ui/Dialog";
@@ -46,8 +47,10 @@ export default function Salesdata() {
 
   // Load sales on component mount
   useEffect(() => {
-    fetchAllSales();
-  }, [fetchAllSales]);
+    if (uploads.length === 0) {
+      fetchAllSales();
+    }
+  }, [fetchAllSales, uploads.length]);
 
   // Show error toast
   useEffect(() => {
@@ -92,7 +95,8 @@ export default function Salesdata() {
     if (!currentUpload) return;
 
     if (window.confirm("Delete this record?")) {
-      const success = await deleteRecordFromSales(currentUpload.id, recordIndex);
+      const uId = currentUpload.id || currentUpload._id;
+      const success = await deleteRecordFromSales(uId, recordIndex);
       if (success) {
         toast("Record deleted", "success");
       }
@@ -106,7 +110,8 @@ export default function Salesdata() {
       return;
     }
 
-    const success = await addRecordToSales(currentUpload.id, newRecord);
+    const uId = currentUpload.id || currentUpload._id;
+    const success = await addRecordToSales(uId, newRecord);
     if (success) {
       toast("Record added successfully", "success");
       setNewRecord({});
@@ -181,14 +186,24 @@ export default function Salesdata() {
     <div className="salesdata-page">
       <div className="page-header">
         <h1>Sales Data Management</h1>
-        <button
-          className="btn-primary"
-          onClick={() => setIsUploadOpen(true)}
-          disabled={isUploading}
-        >
-          <Upload size={18} />
-          Upload File
-        </button>
+        <div style={{ display: "flex", gap: "10px" }}>
+          <button
+            className="btn-secondary"
+            onClick={() => fetchAllSales(true)}
+            disabled={isLoadingSales || isUploading}
+          >
+            <RefreshCw size={18} className={isLoadingSales ? "spinner" : ""} />
+            Refresh Data
+          </button>
+          <button
+            className="btn-primary"
+            onClick={() => setIsUploadOpen(true)}
+            disabled={isUploading}
+          >
+            <Upload size={18} />
+            Upload File
+          </button>
+        </div>
       </div>
 
       {/* Uploads List */}
@@ -201,34 +216,37 @@ export default function Salesdata() {
             </div>
           ) : (
             <div className="uploads-grid">
-              {uploads.map((upload) => (
-                <div key={upload.id} className="upload-card">
-                  <h3>{upload.filename}</h3>
-                  <p className="upload-meta">
-                    {upload.record_count} records
-                  </p>
-                  <div className="upload-actions">
-                    <button
-                      className="btn-secondary"
-                      onClick={() => fetchSalesById(upload.id)}
-                    >
-                      <Eye size={16} /> View
-                    </button>
-                    <button
-                      className="btn-secondary"
-                      onClick={() => handleExport(upload.id)}
-                    >
-                      <Download size={16} /> Export
-                    </button>
-                    <button
-                      className="btn-danger"
-                      onClick={() => handleDeleteUpload(upload.id)}
-                    >
-                      <Trash2 size={16} />
-                    </button>
+              {uploads.map((upload) => {
+                const uId = upload.id || upload._id;
+                return (
+                  <div key={uId} className="upload-card">
+                    <h3>{upload.filename}</h3>
+                    <p className="upload-meta">
+                      {upload.record_count} records
+                    </p>
+                    <div className="upload-actions">
+                      <button
+                        className="btn-secondary"
+                        onClick={() => fetchSalesById(uId)}
+                      >
+                        <Eye size={16} /> View
+                      </button>
+                      <button
+                        className="btn-secondary"
+                        onClick={() => handleExport(uId)}
+                      >
+                        <Download size={16} /> Export
+                      </button>
+                      <button
+                        className="btn-danger"
+                        onClick={() => handleDeleteUpload(uId)}
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>

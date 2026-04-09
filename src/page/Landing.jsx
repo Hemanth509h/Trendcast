@@ -1,9 +1,12 @@
 import React from "react";
 import { useLocation } from "wouter";
-import { TrendingUp, BarChart3, Zap, Check } from "lucide-react";
+import { TrendingUp, BarChart3, Zap, Check, Sun, Moon } from "lucide-react";
+import { useTheme } from "../context/ThemeContext";
 import "./landing.css";
 
 export default function Landing({ onLoginClick }) {
+  const { theme, toggleTheme } = useTheme();
+
   return (
     <div className="landing-container">
       {/* Navigation */}
@@ -13,9 +16,14 @@ export default function Landing({ onLoginClick }) {
             <TrendingUp size={28} />
             <span>Trendcast</span>
           </div>
-          <button className="nav-login-btn" onClick={onLoginClick}>
-            Login
-          </button>
+          <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+            <button onClick={toggleTheme} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-main)', display: 'flex', alignItems: 'center', justifyContent: 'center' }} title="Toggle Theme">
+              {theme === 'light' ? <Moon size={24} /> : <Sun size={24} />}
+            </button>
+            <button className="nav-login-btn" onClick={onLoginClick}>
+              Login
+            </button>
+          </div>
         </div>
       </nav>
 
