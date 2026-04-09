@@ -5,7 +5,7 @@
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "https://trendcast.onrender.com/:path*"
+      "destination": "https://trendcast.onrender.com/api/:path*"
     },
     {
       "source": "/(.*)",
