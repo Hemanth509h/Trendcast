@@ -56,10 +56,6 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
 
-def generate_verification_token() -> str:
-    """Generate a random verification token"""
-    return secrets.token_urlsafe(32)
-
 def format_user_response(user: dict) -> dict:
     """Format user data for response (exclude sensitive fields)"""
     return {
@@ -81,10 +77,6 @@ class SignUpRequest(BaseModel):
 class LoginRequest(BaseModel):
     email: EmailStr
     password: str
-
-class VerifyEmailRequest(BaseModel):
-    email: EmailStr
-    verification_token: str
 
 class PasswordResetRequest(BaseModel):
     email: EmailStr
@@ -160,39 +152,9 @@ async def register(req: SignUpRequest):
             "email": user_data["email"],
             "full_name": user_data["full_name"],
             "email_verified": True,
-            "message": "Account created and verified successfully!"
+            "message": "Account created successfully!"
         }
     )
-
-# ==========================
-# VERIFY EMAIL ENDPOINT
-# ==========================
-@router.post("/auth/verify-email", response_model=MessageResponse)
-async def verify_email(req: VerifyEmailRequest):
-    """Verify user email with token"""
-    
-    user = await users_collection.find_one({"email": req.email.lower()})
-    
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
-    
-    if user.get("email_verified"):
-        raise HTTPException(status_code=400, detail="Email already verified")
-    
-    if user.get("verification_token") != req.verification_token:
-        raise HTTPException(status_code=401, detail="Invalid verification token")
-    
-    # Update user to verified
-    await users_collection.update_one(
-        {"id": user["id"]},
-        {"$set": {
-            "email_verified": True,
-            "verification_token": None,  # Clear token after use
-            "updated_at": datetime.now(timezone.utc).isoformat()
-        }}
-    )
-    
-    return MessageResponse(message="Email verified successfully! You can now login.")
 
 # ==========================
 # LOGIN ENDPOINT
@@ -302,34 +264,6 @@ async def logout(request: Request):
     """Logout user"""
     # In a stateless JWT system, logout is handled client-side by removing the token
     return MessageResponse(message="Logged out successfully")
-
-# ==========================
-# RESEND VERIFICATION EMAIL
-# ==========================
-@router.post("/auth/resend-verification")
-async def resend_verification(email: EmailStr):
-    """Resend verification email"""
-    
-    user = await users_collection.find_one({"email": email.lower()})
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
-    
-    if user.get("email_verified"):
-        raise HTTPException(status_code=400, detail="Email already verified")
-    
-    # Generate new token
-    verification_token = generate_verification_token()
-    
-    await users_collection.update_one(
-        {"id": user["id"]},
-        {"$set": {"verification_token": verification_token}}
-    )
-    
-    print(f"[VERIFICATION] Resend for {email} - Token: {verification_token}")
-    
-    return MessageResponse(
-        message=f"Verification token sent. Token: {verification_token}"
-    )
 
 # ==========================
 # DEPENDENCY FOR PROTECTED ROUTES

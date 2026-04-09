@@ -69,24 +69,6 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const verifyEmail = async (email, verificationToken) => {
-    try {
-      setError(null);
-      const response = await fetch(`${API_BASE_URL}/api/auth/verify-email`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, verification_token: verificationToken }),
-      });
-
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.detail || "Verification failed");
-
-      return { success: true };
-    } catch (err) {
-      return { success: false, error: err.message };
-    }
-  };
-
   const login = async (email, password) => {
     try {
       setError(null);
@@ -159,7 +141,6 @@ export const AuthProvider = ({ children }) => {
         loading,
         error,
         register,
-        verifyEmail,
         login,
         logout,
         updateProfile,
