@@ -17,6 +17,14 @@ async def get_database():
     # Test the connection
     try:
         await client.admin.command('ping')
+        return db
     except Exception as e:
-        print(f"MongoDB connection error: {e}")
-    return db
+        print(f"CRITICAL: MongoDB connection error: {e}")
+        return None
+
+async def ping_db():
+    try:
+        await client.admin.command('ping')
+        return True, "Connected"
+    except Exception as e:
+        return False, str(e)

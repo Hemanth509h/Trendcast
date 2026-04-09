@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException, Depends, Request
 from pydantic import BaseModel, EmailStr, Field
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import os
 from jose import JWTError, jwt
 import bcrypt
@@ -49,9 +49,9 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -
     """Create JWT access token"""
     to_encode = data.copy()
     if expires_delta:
-        expire = datetime.utcnow() + expires_delta
+        expire = datetime.now(timezone.utc) + expires_delta
     else:
-        expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+        expire = datetime.now(timezone.utc) + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     to_encode.update({"exp": expire})
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
@@ -135,14 +135,18 @@ async def register(req: SignUpRequest):
         "full_name": req.full_name.strip(),
         "email_verified": False,  # User must verify email
         "verification_token": verification_token,
-        "created_at": datetime.utcnow().isoformat(),
-        "updated_at": datetime.utcnow().isoformat(),
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "updated_at": datetime.now(timezone.utc).isoformat(),
     }
     
     try:
         await users_collection.insert_one(user_data)
     except Exception as e:
-        raise HTTPException(status_code=500, detail="Failed to create user. Please try again.")
+        print(f"ERROR in register: {str(e)}")
+        raise HTTPException(
+            status_code=500, 
+            detail=f"Failed to create user in database: {str(e)}"
+        )
     
     # Generate token (unverified user can still access with limitations)
     access_token = create_access_token(data={"sub": user_id, "verified": False})
@@ -186,7 +190,7 @@ async def verify_email(req: VerifyEmailRequest):
         {"$set": {
             "email_verified": True,
             "verification_token": None,  # Clear token after use
-            "updated_at": datetime.utcnow().isoformat()
+            "updated_at": datetime.now(timezone.utc).isoformat()
         }}
     )
     
@@ -279,7 +283,7 @@ async def update_profile(req: UpdateProfileRequest, request: Request):
     if not update_data:
         raise HTTPException(status_code=400, detail="No fields to update")
     
-    update_data["updated_at"] = datetime.utcnow().isoformat()
+    update_data["updated_at"] = datetime.now(timezone.utc).isoformat()
     
     result = await users_collection.update_one(
         {"id": user_id},

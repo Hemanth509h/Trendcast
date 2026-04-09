@@ -7,6 +7,7 @@ import os
 from dotenv import load_dotenv
 
 from api.routes import sales, forecasts, auth
+from api.database import ping_db
 
 load_dotenv()
 
@@ -44,6 +45,18 @@ async def add_user_token(request: Request, call_next):
 app.include_router(auth.router, prefix="/api", tags=["Auth"])
 app.include_router(sales.router, prefix="/api", tags=["Sales"])
 app.include_router(forecasts.router, prefix="/api", tags=["Forecasts"])
+
+@app.get("/api/health")
+async def health_check():
+    db_ok, db_msg = await ping_db()
+    return {
+        "status": "healthy" if db_ok else "degraded",
+        "database": {
+            "connected": db_ok,
+            "message": db_msg
+        },
+        "version": "1.0.0"
+    }
 
 dist_dir = Path(__file__).parent.parent / "dist"
 if dist_dir.exists():
