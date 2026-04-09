@@ -10,6 +10,7 @@ import {
   Download,
   Eye,
   RefreshCw,
+  TableProperties,
 } from "lucide-react";
 import "./salesdata.css";
 import Dialog from "../ui/Dialog";
@@ -212,7 +213,11 @@ export default function Salesdata() {
           <h2>Your Uploads</h2>
           {uploads.length === 0 ? (
             <div className="empty-state">
-              <p>No uploads yet. Start by uploading a CSV or Excel file.</p>
+              <div className="empty-state-icon">
+                <TableProperties size={64} strokeWidth={1.5} />
+              </div>
+              <h2>No datasets found</h2>
+              <p>Start by uploading a CSV or Excel file to manage your sales records.</p>
             </div>
           ) : (
             <div className="uploads-grid">

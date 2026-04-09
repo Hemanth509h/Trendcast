@@ -64,37 +64,33 @@ export function Sidebar({ onLoginClick }) {
           })}
         </div>
 
-        <hr />
-
-        <div className="sidebar-bottom" style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-          <button className="menu-item" onClick={toggleTheme} style={{ background: 'none', border: 'none', width: '100%', cursor: 'pointer', textAlign: 'left', padding: '12px 16px' }}>
-            {theme === 'light' ? <Moon className="menu-icon" /> : <Sun className="menu-icon" />}
+        <div className="sidebar-footer">
+          <button className="theme-toggle" onClick={toggleTheme} title={theme === 'light' ? 'Switch to Dark Mode' : 'Switch to Light Mode'}>
+            {theme === 'light' ? <Moon size={20} /> : <Sun size={20} />}
             <span>{theme === 'light' ? 'Dark Mode' : 'Light Mode'}</span>
           </button>
 
-          {!user ? (
-            <button className="menu-item" onClick={onLoginClick} style={{ background: 'none', border: 'none', width: '100%', cursor: 'pointer', textAlign: 'left', padding: '12px 16px' }}>
-              <LogIn className="menu-icon" />
+          {!user && (
+            <button className="login-button" onClick={onLoginClick}>
+              <LogIn size={20} />
               <span>Login</span>
             </button>
-          ) : null}
+          )}
 
-          {/* User Section */}
           {user && (
-            <div className="sidebar-user" style={{ marginTop: '10px' }}>
-              <hr style={{ margin: "0 0 10px 0" }} />
-              <div className="user-info">
+            <div className="user-section">
+              <div className="user-card">
                 <div className="user-avatar">
-                  <User size={18} />
+                  {user?.full_name?.[0]?.toUpperCase() || <User size={18} />}
                 </div>
-                <div className="user-details">
-                  <p className="user-name">{user?.full_name || user?.email}</p>
-                  <p className="user-email">{user?.email}</p>
+                <div className="user-info">
+                  <span className="user-name">{user?.full_name || 'User'}</span>
+                  <span className="user-email">{user?.email}</span>
                 </div>
               </div>
               <button className="logout-button" onClick={handleLogout}>
-                <LogOut size={18} />
-                <span>Logout</span>
+                <LogOut size={16} />
+                <span>Sign Out</span>
               </button>
             </div>
           )}

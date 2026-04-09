@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Loader2, RefreshCw, Download, Trash2 } from "lucide-react";
+import { Loader2, RefreshCw, Download, Trash2, TrendingUp } from "lucide-react";
 import "./forecasts.css";
 import { toast } from "../ui/toast";
 import { useData } from "../context/DataContext";
@@ -819,19 +819,31 @@ export default function Forecasts() {
 
       {!forecastData && !isFetchingDataset && selectedUpload && (
         <div className="empty-forecast">
-          <p>Configure the forecast parameters and click "Generate Forecast" to see results</p>
+          <div className="empty-icon-wrapper">
+            <TrendingUp size={48} strokeWidth={1.5} />
+          </div>
+          <h3>Ready to Forecast</h3>
+          <p>Configure the parameters above and click "Generate Forecast" to see results.</p>
         </div>
       )}
 
       {!selectedUpload && !isFetchingDataset && uploads.length > 0 && (
         <div className="empty-forecast">
-          <p>Select a dataset to begin forecasting</p>
+          <div className="empty-icon-wrapper">
+            <TrendingUp size={48} strokeWidth={1.5} />
+          </div>
+          <h3>Select a Dataset</h3>
+          <p>Choose one of your uploaded datasets from the dropdown to begin forecasting.</p>
         </div>
       )}
 
       {uploads.length === 0 && (
         <div className="empty-forecast">
-          <p>No datasets available. Please upload sales data first.</p>
+          <div className="empty-icon-wrapper">
+            <TrendingUp size={48} strokeWidth={1.5} />
+          </div>
+          <h3>No Data Available</h3>
+          <p>Start by uploading your sales records in the Sales Data section.</p>
         </div>
       )}
 
