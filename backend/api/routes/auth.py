@@ -6,7 +6,6 @@ from jose import JWTError, jwt
 import bcrypt
 from typing import Optional
 import uuid
-import secrets
 import re
 from ..database import users_collection
 
@@ -118,7 +117,6 @@ async def register(req: SignUpRequest):
     
     user_id = str(uuid.uuid4())
     hashed_password = get_password_hash(req.password)
-    verification_token = generate_verification_token()
     
     user_data = {
         "id": user_id,
