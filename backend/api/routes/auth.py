@@ -99,59 +99,50 @@ class MessageResponse(BaseModel):
 # ==========================
 @router.post("/auth/register", response_model=AuthResponse)
 async def register(req: SignUpRequest):
-    """Register a new user with email verification"""
-    
-    # Validate password strength
+    """Register a new user."""
+
     is_valid, message = validate_password(req.password)
     if not is_valid:
         raise HTTPException(status_code=400, detail=message)
-    
-    # Check if user already exists
+
     existing_user = await users_collection.find_one({"email": req.email.lower()})
     if existing_user:
-        raise HTTPException(status_code=400, detail="Email already registered. Please login or use a different email.")
-    
-    # Validate full name
-    if not req.full_name or len(req.full_name.strip()) == 0:
+        raise HTTPException(
+            status_code=400,
+            detail="Email already registered. Please login or use a different email."
+        )
+
+    if not req.full_name or not req.full_name.strip():
         raise HTTPException(status_code=400, detail="Full name is required")
-    
+
     user_id = str(uuid.uuid4())
     hashed_password = get_password_hash(req.password)
-    
     user_data = {
         "id": user_id,
         "email": req.email.lower(),
         "hashed_password": hashed_password,
         "full_name": req.full_name.strip(),
-        "email_verified": True,  # Automatically verified
-        "verification_token": None,
+        "email_verified": True,
         "created_at": datetime.now(timezone.utc).isoformat(),
         "updated_at": datetime.now(timezone.utc).isoformat(),
     }
-    
+
     try:
         await users_collection.insert_one(user_data)
     except Exception as e:
         print(f"ERROR in register: {str(e)}")
         raise HTTPException(
-            status_code=500, 
-            detail=f"Failed to create user in database: {str(e)}"
+            status_code=500,
+            detail="Failed to create user in database."
         )
-    
-    # Generate token (verified user)
+
     access_token = create_access_token(data={"sub": user_id, "verified": True})
-    
+
     print(f"[REGISTER] User {req.email} registered and verified automatically")
-    
+
     return AuthResponse(
         access_token=access_token,
-        user={
-            "id": user_id,
-            "email": user_data["email"],
-            "full_name": user_data["full_name"],
-            "email_verified": True,
-            "message": "Account created successfully!"
-        }
+        user=format_user_response(user_data)
     )
 
 # ==========================
