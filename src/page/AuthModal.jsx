@@ -99,11 +99,9 @@ export default function AuthModal({ isOpen, onClose }) {
       setLoading(false);
 
       if (result.success) {
-        setSuccess("Registration successful! Redirecting...");
-        setTimeout(() => {
-          onClose();
-          setLocation("/");
-        }, 1500);
+        setSuccess("Registration successful! Please login to continue.");
+        setIsLogin(true);
+        setError("");
         setPassword("");
         setConfirmPassword("");
       } else {
