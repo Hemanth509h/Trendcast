@@ -81,11 +81,12 @@ class PasswordResetRequest(BaseModel):
     email: EmailStr
 
 class UpdatePasswordRequest(BaseModel):
-    old_password: str
+    current_password: str
     new_password: str = Field(..., min_length=8)
 
 class UpdateProfileRequest(BaseModel):
     full_name: Optional[str] = None
+    email: Optional[EmailStr] = None
 
 class AuthResponse(BaseModel):
     access_token: str
@@ -210,24 +211,20 @@ async def get_current_user(request: Request):
 # UPDATE PROFILE ENDPOINT
 # ==========================
 @router.put("/auth/profile")
-async def update_profile(req: UpdateProfileRequest, request: Request):
+async def update_profile(req: UpdateProfileRequest, user_id: str = Depends(get_current_user_id)):
     """Update user profile"""
-    
-    auth_header = request.headers.get("Authorization")
-    if not auth_header or not auth_header.startswith("Bearer "):
-        raise HTTPException(status_code=401, detail="No authentication token provided")
-    
-    token = auth_header.split(" ")[1]
-    
-    try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        user_id: str = payload.get("sub")
-    except JWTError:
-        raise HTTPException(status_code=401, detail="Invalid token")
     
     update_data = {}
     if req.full_name:
         update_data["full_name"] = req.full_name.strip()
+    
+    if req.email:
+        new_email = req.email.lower()
+        # Check if email is already taken by ANOTHER user
+        existing = await users_collection.find_one({"email": new_email})
+        if existing and existing.get("id") != user_id:
+            raise HTTPException(status_code=400, detail="Email already in use")
+        update_data["email"] = new_email
     
     if not update_data:
         raise HTTPException(status_code=400, detail="No fields to update")
@@ -244,6 +241,38 @@ async def update_profile(req: UpdateProfileRequest, request: Request):
     
     user = await users_collection.find_one({"id": user_id})
     return {"user": format_user_response(user), "message": "Profile updated successfully"}
+
+# ==========================
+# CHANGE PASSWORD ENDPOINT
+# ==========================
+@router.post("/auth/change-password", response_model=MessageResponse)
+async def change_password(req: UpdatePasswordRequest, user_id: str = Depends(get_current_user_id)):
+    """Change user password"""
+    
+    user = await users_collection.find_one({"id": user_id})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    if not verify_password(req.current_password, user.get("hashed_password", "")):
+        raise HTTPException(status_code=400, detail="Incorrect current password")
+    
+    is_valid, message = validate_password(req.new_password)
+    if not is_valid:
+        raise HTTPException(status_code=400, detail=message)
+        
+    hashed_password = get_password_hash(req.new_password)
+    
+    await users_collection.update_one(
+        {"id": user_id},
+        {
+            "$set": {
+                "hashed_password": hashed_password,
+                "updated_at": datetime.now(timezone.utc).isoformat()
+            }
+        }
+    )
+    
+    return MessageResponse(message="Password updated successfully")
 
 # ==========================
 # LOGOUT ENDPOINT
