@@ -13,6 +13,7 @@ import {
   LogIn,
   Sun,
   Moon,
+  X,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { useTheme } from "../context/ThemeContext";
@@ -24,7 +25,7 @@ const path = [
   { label: "Profile", icon: User, href: "/Profile" }
 ];
 
-export function Sidebar({ onLoginClick }) {
+export function Sidebar({ onLoginClick, isOpen, onClose }) {
   const [location] = useLocation();
   const { user, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
@@ -35,15 +36,19 @@ export function Sidebar({ onLoginClick }) {
 
   return (
     <>
-      <aside className="sidebar">
+      <div className={`sidebar-overlay ${isOpen ? 'visible' : ''}`} onClick={onClose}></div>
+      <aside className={`sidebar ${isOpen ? 'open' : ''}`}>
         <div className="sidebar-content">
-          <div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div className="logo">
               <LineChart className="linechart" />
               <h1 className="text-xl font-bold tracking-tight font-display text-foreground">
                 Trendcast
               </h1>
             </div>
+            <button className="mobile-menu-toggle" onClick={onClose} style={{ display: 'none' }}>
+              <X size={24} />
+            </button>
           </div>
         </div>
         <hr />
@@ -55,6 +60,7 @@ export function Sidebar({ onLoginClick }) {
                 href={item.href}
                 key={item.href}
                 className={`menu-item ${isActive ? "menu-item-active" : ""}`}
+                onClick={onClose}
               >
                 <item.icon
                   className={`menu-icon ${isActive ? "menu-icon-active" : ""}`}
@@ -97,6 +103,14 @@ export function Sidebar({ onLoginClick }) {
           )}
         </div>
       </aside>
+
+      <style>{`
+        @media (max-width: 1024px) {
+          .mobile-menu-toggle {
+            display: flex !important;
+          }
+        }
+      `}</style>
     </>
   );
 }
