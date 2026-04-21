@@ -1,7 +1,7 @@
 import React from "react";
 import "./ui.css"; 
 
-export default function Dialog({ isOpen, onClose, title, children }) {
+export default function Dialog({ isOpen, onClose, title, children, showHeader = true }) {
   if (!isOpen) return null;
 
   return (
@@ -11,7 +11,11 @@ export default function Dialog({ isOpen, onClose, title, children }) {
         onClick={(e) => e.stopPropagation()}
       >
         <div className="header-dialog">
-          {title && <h2 style={{textAlign:"center", color: "#fff"}}>{title}</h2>}
+          {showHeader && title && (
+            <h2 className="dialog-title-standard" style={{textAlign:"center", color: "var(--text-main)", marginBottom: '1.5rem'}}>
+              {title}
+            </h2>
+          )}
           <div className="dialog-body">{children}</div>
         </div>
       </div>

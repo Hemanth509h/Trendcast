@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { CheckCircle2, AlertCircle, Info, AlertTriangle } from "lucide-react";
 import "../ui/ui.css";
 
 let setToastState = null;
@@ -28,6 +29,12 @@ export function toast(message, type = "info") {
   }, 3000);
 }
 
+// Add helper methods
+toast.success = (msg) => toast(msg, "success");
+toast.error = (msg) => toast(msg, "error");
+toast.info = (msg) => toast(msg, "info");
+toast.warning = (msg) => toast(msg, "warning");
+
 export function ToastContainer() {
   const [toasts, setToasts] = useState([]);
 
@@ -44,7 +51,11 @@ export function ToastContainer() {
     <div className="toast-container">
       {toasts.map((t) => (
         <div key={t.id} className={`toast toast-${t.type}`}>
-          {t.message}
+          {t.type === "success" && <CheckCircle2 size={18} />}
+          {t.type === "error" && <AlertCircle size={18} />}
+          {t.type === "info" && <Info size={18} />}
+          {t.type === "warning" && <AlertTriangle size={18} />}
+          <span>{t.message}</span>
         </div>
       ))}
     </div>

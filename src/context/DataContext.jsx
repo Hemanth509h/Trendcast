@@ -48,9 +48,34 @@ export const DataProvider = ({ children }) => {
 
   // Forecast State
   const [forecasts, setForecasts] = useState([]);
-  const [currentForecast, setCurrentForecast] = useState(null);
+  const [currentForecast, setCurrentForecast] = useState(() => {
+    try {
+      const saved = sessionStorage.getItem("trendcast_current_forecast");
+      if (saved) return JSON.parse(saved);
+    } catch (e) {
+      console.warn("Failed to load forecast from session storage", e);
+    }
+    return null;
+  });
   const [isLoadingForecast, setIsLoadingForecast] = useState(false);
   const [forecastError, setForecastError] = useState(null);
+
+  // UI Selection State (to persist across pages)
+  const [forecastUIState, setForecastUIState] = useState(() => {
+    try {
+      const saved = sessionStorage.getItem("trendcast_forecast_ui");
+      if (saved) return JSON.parse(saved);
+    } catch (e) {
+      console.warn("Failed to load UI state from session storage", e);
+    }
+    return {
+      selectedUploadId: "",
+      selectedColumn: "",
+      horizon: 12,
+      model: "timeseries",
+      groupBy: ""
+    };
+  });
 
   const { getToken } = useAuth();
 
@@ -267,6 +292,27 @@ export const DataProvider = ({ children }) => {
 
   // ==================== FORECAST OPERATIONS ====================
 
+  // Sync currentForecast and UI state to sessionStorage
+  React.useEffect(() => {
+    try {
+      if (currentForecast) {
+        sessionStorage.setItem("trendcast_current_forecast", JSON.stringify(currentForecast));
+      } else {
+        sessionStorage.removeItem("trendcast_current_forecast");
+      }
+    } catch (e) {
+      console.warn("Forecast data too large for session storage", e);
+    }
+  }, [currentForecast]);
+
+  React.useEffect(() => {
+    try {
+      sessionStorage.setItem("trendcast_forecast_ui", JSON.stringify(forecastUIState));
+    } catch (e) {
+      console.warn("Failed to save UI state", e);
+    }
+  }, [forecastUIState]);
+
   const generateForecast = useCallback(async (uploadId, params) => {
     setIsLoadingForecast(true);
     setForecastError(null);
@@ -292,6 +338,15 @@ export const DataProvider = ({ children }) => {
 
       const data = await response.json();
       setCurrentForecast(data);
+      // Update UI state with used params
+      setForecastUIState(prev => ({
+        ...prev,
+        selectedUploadId: uploadId,
+        selectedColumn: params.column,
+        horizon: params.horizon,
+        model: params.model,
+        groupBy: params.group_by || ""
+      }));
       return data;
     } catch (error) {
       setForecastError(error.message);
@@ -383,6 +438,8 @@ export const DataProvider = ({ children }) => {
     fetchForecasts,
     deleteForecast,
     clearForecastError,
+    forecastUIState,
+    setForecastUIState,
   }), [
     uploads,
     currentUpload,
@@ -402,7 +459,8 @@ export const DataProvider = ({ children }) => {
     forecastError,
     generateForecast,
     fetchForecasts,
-    deleteForecast
+    deleteForecast,
+    forecastUIState
   ]);
 
   return (

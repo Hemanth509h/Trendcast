@@ -19,6 +19,7 @@
   --border-focus: rgba(255, 255, 255, 0.15);
   
   --surface-alpha: rgba(255, 255, 255, 0.02);
+  --surface-alpha-subtle: rgba(255, 255, 255, 0.05);
   --surface-alpha-hover: rgba(255, 255, 255, 0.05);
   --surface-solid: #18181b;
   --overlay: rgba(0, 0, 0, 0.5);
@@ -32,36 +33,53 @@
   --radius-md: 14px;
   --radius-lg: 20px;
   --radius-xl: 32px;
+
+  /* Theme-aware component variables */
+  --card-bg: var(--bg-glass);
+  --card-shadow: var(--shadow-lg);
+  --metric-gradient: linear-gradient(135deg, #fff 0%, var(--text-muted) 100%);
+  --chart-grid: rgba(255, 255, 255, 0.15);
+  --chart-hist: rgba(148, 163, 184, 0.45);
+  --table-header-bg: #18181b;
 }
 
 :root[data-theme="light"] {
   --bg-dark: #f8fafc; 
-  --bg-glass: rgba(255, 255, 255, 0.45); 
-  --bg-glass-hover: rgba(255, 255, 255, 0.65);
+  --bg-glass: rgba(255, 255, 255, 0.85); 
+  --bg-glass-hover: rgba(255, 255, 255, 0.95);
   
   --primary: #6366f1;
-  --primary-glow: rgba(99, 102, 241, 0.2);
+  --primary-glow: rgba(99, 102, 241, 0.1);
   --accent: #0ea5e9;
-  --accent-glow: rgba(14, 165, 233, 0.2);
+  --accent-glow: rgba(14, 165, 233, 0.1);
   --danger: #dc2626;
-  --danger-glow: rgba(220, 38, 38, 0.1);
+  --danger-glow: rgba(220, 38, 38, 0.05);
 
-  --text-main: #0f172a;
+  --text-main: #1e293b;
   --text-muted: #64748b;
   
-  --surface-alpha: rgba(255, 255, 255, 0.5);
-  --surface-alpha-hover: rgba(255, 255, 255, 0.8);
+  --surface-alpha: rgba(255, 255, 255, 0.6);
+  --surface-alpha-subtle: rgba(0, 0, 0, 0.03);
+  --surface-alpha-hover: rgba(255, 255, 255, 0.9);
   --surface-solid: #ffffff;
-  --overlay: rgba(241, 245, 249, 0.8);
+  --overlay: rgba(241, 245, 249, 0.7);
   
-  --nav-bg: rgba(255, 255, 255, 0.6);
+  --nav-bg: rgba(255, 255, 255, 0.8);
   
-  --border-light: rgba(0, 0, 0, 0.06);
-  --border-focus: rgba(0, 0, 0, 0.12);
+  --border-light: rgba(0, 0, 0, 0.08);
+  --border-focus: rgba(0, 0, 0, 0.15);
   
-  --shadow-sm: 0 4px 12px rgba(0, 0, 0, 0.04);
-  --shadow-lg: 0 20px 48px rgba(15, 23, 42, 0.08);
-  --shadow-glow: 0 0 20px var(--primary-glow);
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.05);
+  --shadow-lg: 0 12px 32px rgba(15, 23, 42, 0.06);
+  --shadow-glow: 0 0 15px var(--primary-glow);
+
+  /* Theme-aware component variables */
+  --card-bg: #ffffff;
+  --card-shadow: 0 10px 25px rgba(0, 0, 0, 0.04);
+  --metric-gradient: linear-gradient(135deg, var(--text-main) 0%, var(--text-muted) 100%);
+  --chart-grid: rgba(0, 0, 0, 0.08);
+  --chart-hist: rgba(100, 116, 139, 0.2);
+  --table-header-bg: #f1f5f9;
 }
 
 * {
@@ -139,6 +157,22 @@ main.main-content {
   max-width: 1400px;
   margin: 0 auto;
   animation: fadeIn 0.5s ease-out forwards;
+}
+
+.page-title {
+  font-size: 2.5rem;
+  font-weight: 800;
+  margin-bottom: 0.5rem;
+  background: linear-gradient(135deg, var(--text-main) 0%, var(--text-muted) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.page-subtitle {
+  font-size: 1.1rem;
+  color: var(--text-muted);
+  margin-bottom: 2rem;
 }
 
 @keyframes fadeIn {
@@ -305,6 +339,7 @@ button {
   font-size: 24px;
   background: linear-gradient(to right, var(--text-main), var(--text-muted));
   -webkit-background-clip: text;
+  background-clip: text;
   -webkit-text-fill-color: transparent;
 }
 

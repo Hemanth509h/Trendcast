@@ -107,7 +107,7 @@ export const AuthProvider = ({ children }) => {
     localStorage.removeItem("user");
   };
 
-  const updateProfile = async (fullName) => {
+  const updateProfile = async (fullName, email) => {
     try {
       setError(null);
       const response = await fetch(`${API_BASE_URL}/api/auth/profile`, {
@@ -116,7 +116,7 @@ export const AuthProvider = ({ children }) => {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ full_name: fullName }),
+        body: JSON.stringify({ full_name: fullName, email }),
       });
 
       const data = await response.json();
@@ -124,6 +124,30 @@ export const AuthProvider = ({ children }) => {
 
       setUser(data.user);
       localStorage.setItem("user", JSON.stringify(data.user));
+      return { success: true };
+    } catch (err) {
+      return { success: false, error: err.message };
+    }
+  };
+
+  const changePassword = async (currentPassword, newPassword) => {
+    try {
+      setError(null);
+      const response = await fetch(`${API_BASE_URL}/api/auth/change-password`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ 
+          current_password: currentPassword, 
+          new_password: newPassword 
+        }),
+      });
+
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.detail || "Password change failed");
+
       return { success: true };
     } catch (err) {
       return { success: false, error: err.message };
@@ -142,6 +166,7 @@ export const AuthProvider = ({ children }) => {
         login,
         logout,
         updateProfile,
+        changePassword,
         getToken,
         isAuthenticated: !!user,
       }}

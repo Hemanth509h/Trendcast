@@ -20,7 +20,8 @@ import "./ui.css";
 
 const path = [
   { label: "Sales Data", icon: TableProperties, href: "/" },
-  { label: "Forecasts", icon: TrendingUp, href: "/Forecasts" }
+  { label: "Forecasts", icon: TrendingUp, href: "/Forecasts" },
+  { label: "Profile", icon: User, href: "/Profile" }
 ];
 
 export function Sidebar({ onLoginClick }) {

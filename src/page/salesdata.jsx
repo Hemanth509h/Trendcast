@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import "./salesdata.css";
 import Dialog from "../ui/Dialog";
+import FileUpload from "../ui/FileUpload";
 import "../ui/ui.css";
 import { toast } from "../ui/toast";
 import { useData } from "../context/DataContext";
@@ -214,10 +215,17 @@ export default function Salesdata() {
           {uploads.length === 0 ? (
             <div className="empty-state">
               <div className="empty-state-icon">
-                <TableProperties size={64} strokeWidth={1.5} />
+                <TableProperties size={48} />
               </div>
               <h2>No datasets found</h2>
-              <p>Start by uploading a CSV or Excel file to manage your sales records.</p>
+              <p>Start by uploading a CSV or Excel file to manage your sales records and generate AI-powered forecasts.</p>
+              <button 
+                className="btn-primary" 
+                onClick={() => setIsUploadOpen(true)}
+                style={{ marginTop: '1rem' }}
+              >
+                <Upload size={18} /> Upload Your First Dataset
+              </button>
             </div>
           ) : (
             <div className="uploads-grid">
@@ -397,20 +405,11 @@ export default function Salesdata() {
           </button>
         </div>
         <div className="dialog-content">
-          <p>Upload a CSV or Excel file with your sales data</p>
-          <input
-            type="file"
+          <FileUpload 
+            onFileSelect={(file) => handleFileUpload({ target: { files: [file] } })}
+            isUploading={isUploading}
             accept=".csv,.xlsx"
-            onChange={handleFileUpload}
-            disabled={isUploading}
-            className="file-input"
           />
-          {isUploading && (
-            <div className="upload-progress">
-              <Loader2 size={20} className="spinner" />
-              <p>Uploading...</p>
-            </div>
-          )}
         </div>
       </Dialog>
 

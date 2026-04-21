@@ -6,6 +6,7 @@ import Salesdata from "./page/salesdata";
 import Landing from "./page/Landing";
 import { ToastContainer } from "./ui/toast";
 import Forecasts from "./page/forecasts";
+import Profile from "./page/Profile";
 import AuthModal from "./page/AuthModal";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { DataProvider } from "./context/DataContext";
@@ -40,8 +41,7 @@ function Router() {
                   <Salesdata />
                 </div>
               </main>
-              <ToastContainer />
-            </div>
+                          </div>
           )}
         </Route>
         <Route path="/Forecasts">
@@ -55,13 +55,27 @@ function Router() {
                   <Forecasts />
                 </div>
               </main>
-              <ToastContainer />
+                          </div>
+          )}
+        </Route>
+        <Route path="/Profile">
+          {!isAuthenticated ? (
+            <Landing onLoginClick={() => setShowAuthModal(true)} />
+          ) : (
+            <div className="app-container">
+              <Sidebar />
+              <main className="main-content">
+                <div className="page-container">
+                  <Profile />
+                </div>
+              </main>
             </div>
           )}
         </Route>
       </Switch>
 
       <AuthModal isOpen={showAuthModal} onClose={() => setShowAuthModal(false)} />
+      <ToastContainer />
     </>
   );
 }
