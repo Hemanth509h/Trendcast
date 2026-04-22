@@ -37,10 +37,10 @@ export function Sidebar({ isOpen, onClose, onLoginClick }) {
 
       <aside className={`sidebar ${isOpen ? 'open' : ''}`}>
         <div className="sidebar-header">
-          <div className="logo">
+          <Link href="/" className="logo">
             <ChartIcon className="linechart" />
             <h1>Trendcast</h1>
-          </div>
+          </Link>
           <button className="mobile-close-btn" onClick={onClose}>
             <X size={24} />
           </button>
@@ -100,10 +100,10 @@ export function Sidebar({ isOpen, onClose, onLoginClick }) {
 export function MobileHeader({ onOpenMenu }) {
   return (
     <header className="mobile-nav">
-      <div className="logo" style={{ padding: 0 }}>
+      <Link href="/" className="logo" style={{ padding: 0, textDecoration: 'none' }}>
         <ChartIcon size={24} color="var(--primary)" />
-        <span style={{ fontWeight: 800, fontSize: '18px', marginLeft: '8px' }}>Trendcast</span>
-      </div>
+        <span style={{ fontWeight: 800, fontSize: '18px', marginLeft: '8px', color: 'var(--text-main)' }}>Trendcast</span>
+      </Link>
       <button className="mobile-menu-toggle" onClick={onOpenMenu}>
         <Menu size={24} />
       </button>

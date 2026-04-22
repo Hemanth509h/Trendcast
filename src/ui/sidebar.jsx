@@ -42,9 +42,9 @@ export function Sidebar({ onLoginClick, isOpen, onClose }) {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div className="logo">
               <LineChart className="linechart" />
-              <h1 className="text-xl font-bold tracking-tight font-display text-foreground">
+              <Link href="/" className="text-xl font-bold tracking-tight font-display text-foreground">
                 Trendcast
-              </h1>
+              </Link>
             </div>
             <button className="mobile-menu-toggle" onClick={onClose} style={{ display: 'none' }}>
               <X size={24} />

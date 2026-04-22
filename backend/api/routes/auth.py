@@ -19,6 +19,25 @@ ALGORITHM = os.getenv("ALGORITHM", "HS256")
 ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "1440"))
 
 # ==========================
+# DEPENDENCY FOR PROTECTED ROUTES
+# ==========================
+async def get_current_user_id(request: Request) -> str:
+    auth_header = request.headers.get("Authorization")
+    if not auth_header or not auth_header.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="No token provided")
+    
+    token = auth_header.split(" ")[1]
+    
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        user_id: str = payload.get("sub")
+        if user_id is None:
+            raise HTTPException(status_code=401, detail="Invalid token")
+        return user_id
+    except JWTError:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
+# ==========================
 # HELPER FUNCTIONS
 # ==========================
 def verify_password(plain_password: str, hashed_password: str) -> bool:
@@ -282,22 +301,3 @@ async def logout(request: Request):
     """Logout user"""
     # In a stateless JWT system, logout is handled client-side by removing the token
     return MessageResponse(message="Logged out successfully")
-
-# ==========================
-# DEPENDENCY FOR PROTECTED ROUTES
-# ==========================
-async def get_current_user_id(request: Request) -> str:
-    auth_header = request.headers.get("Authorization")
-    if not auth_header or not auth_header.startswith("Bearer "):
-        raise HTTPException(status_code=401, detail="No token provided")
-    
-    token = auth_header.split(" ")[1]
-    
-    try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        user_id: str = payload.get("sub")
-        if user_id is None:
-            raise HTTPException(status_code=401, detail="Invalid token")
-        return user_id
-    except JWTError:
-        raise HTTPException(status_code=401, detail="Unauthorized")
