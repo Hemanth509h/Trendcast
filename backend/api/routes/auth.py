@@ -117,7 +117,7 @@ class MessageResponse(BaseModel):
 # ==========================
 # SIGNUP ENDPOINT
 # ==========================
-@router.post("/auth/register", response_model=AuthResponse)
+@router.post("/register", response_model=AuthResponse)
 async def register(req: SignUpRequest):
     """Register a new user."""
 
@@ -168,7 +168,7 @@ async def register(req: SignUpRequest):
 # ==========================
 # LOGIN ENDPOINT
 # ==========================
-@router.post("/auth/login", response_model=AuthResponse)
+@router.post("/login", response_model=AuthResponse)
 async def login(req: LoginRequest):
     """Login user with email and password"""
     
@@ -198,7 +198,7 @@ async def login(req: LoginRequest):
 # ==========================
 # GET CURRENT USER ENDPOINT
 # ==========================
-@router.get("/auth/me")
+@router.get("/me")
 async def get_current_user(request: Request):
     """Get current authenticated user"""
     
@@ -229,7 +229,7 @@ async def get_current_user(request: Request):
 # ==========================
 # UPDATE PROFILE ENDPOINT
 # ==========================
-@router.put("/auth/profile")
+@router.put("/profile")
 async def update_profile(req: UpdateProfileRequest, user_id: str = Depends(get_current_user_id)):
     """Update user profile"""
     
@@ -264,7 +264,7 @@ async def update_profile(req: UpdateProfileRequest, user_id: str = Depends(get_c
 # ==========================
 # CHANGE PASSWORD ENDPOINT
 # ==========================
-@router.post("/auth/change-password", response_model=MessageResponse)
+@router.post("/change-password", response_model=MessageResponse)
 async def change_password(req: UpdatePasswordRequest, user_id: str = Depends(get_current_user_id)):
     """Change user password"""
     
@@ -296,7 +296,7 @@ async def change_password(req: UpdatePasswordRequest, user_id: str = Depends(get
 # ==========================
 # LOGOUT ENDPOINT
 # ==========================
-@router.post("/auth/logout", response_model=MessageResponse)
+@router.post("/logout", response_model=MessageResponse)
 async def logout(request: Request):
     """Logout user"""
     # In a stateless JWT system, logout is handled client-side by removing the token

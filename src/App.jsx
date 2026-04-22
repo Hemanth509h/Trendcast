@@ -83,6 +83,10 @@ function Router() {
 }
 
 function App() {
+  useEffect(() => {
+    document.title = "Trendcast | Intelligent Sales Forecasting";
+  }, []);
+
   return (
     <AuthProvider>
       <DataProvider>

@@ -42,7 +42,7 @@ async def add_user_token(request: Request, call_next):
     response = await call_next(request)
     return response
 
-app.include_router(auth.router, prefix="/api", tags=["Auth"])
+app.include_router(auth.router, prefix="/api/auth", tags=["Auth"])
 app.include_router(sales.router, prefix="/api", tags=["Sales"])
 app.include_router(forecasts.router, prefix="/api", tags=["Forecasts"])
 
