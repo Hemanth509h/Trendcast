@@ -6,7 +6,7 @@ from fastapi.responses import FileResponse
 import os
 from dotenv import load_dotenv
 
-from api.routes import sales, forecasts, auth
+from api.routes import sales, forecasts, auth, ai
 from api.database import ping_db
 
 load_dotenv()
@@ -45,6 +45,7 @@ async def add_user_token(request: Request, call_next):
 app.include_router(auth.router, prefix="/api/auth", tags=["Auth"])
 app.include_router(sales.router, prefix="/api", tags=["Sales"])
 app.include_router(forecasts.router, prefix="/api", tags=["Forecasts"])
+app.include_router(ai.router, prefix="/api/ai", tags=["AI"])
 
 @app.get("/api/health")
 async def health_check():

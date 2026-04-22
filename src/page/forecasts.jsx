@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Loader2, RefreshCw, Download, Trash2, TrendingUp } from "lucide-react";
+import { Loader2, RefreshCw, Download, Trash2, TrendingUp, Sparkles } from "lucide-react";
 import "./forecasts.css";
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { toast } from "../ui/toast";
 import { useData } from "../context/DataContext";
 import Dialog from "../ui/Dialog";
@@ -79,6 +81,8 @@ const [isFullscreen, setIsFullscreen] = useState(false);
 const chartRef = useRef(null);
 
 const [isFetchingDataset, setIsFetchingDataset] = useState(false);
+const [isGeneratingAI, setIsGeneratingAI] = useState(false);
+const [aiInsights, setAiInsights] = useState(null);
 
 // Sync UI state back to context
 useEffect(() => {
@@ -208,6 +212,38 @@ const executeMultiColumnForecast = async (columns) => {
 
   } catch (error) {
     toast(`Multi-forecast failed: ${error.message}`, "error");
+  }
+};
+
+const handleGenerateAIInsights = async () => {
+  if (!forecastData || !selectedUpload) return;
+  
+  setIsGeneratingAI(true);
+  try {
+    const token = localStorage.getItem("authToken");
+    const response = await fetch("/api/ai/insights", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`
+      },
+      body: JSON.stringify({
+        upload_id: selectedUpload.id || selectedUpload._id,
+        forecast_id: currentForecast?._id || currentForecast?.id
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error("Failed to generate insights");
+    }
+
+    const data = await response.json();
+    setAiInsights(data.insights);
+    toast("AI Insights generated!", "success");
+  } catch (error) {
+    toast(`AI error: ${error.message}`, "error");
+  } finally {
+    setIsGeneratingAI(false);
   }
 };
 
@@ -775,11 +811,45 @@ return (
         </div>
 
         {/* Export */}
-        <div className="forecast-actions" style={{ marginTop: '20px' }}>
+        <div className="forecast-actions" style={{ marginTop: '30px', display: 'flex', gap: '15px' }}>
           <button className="btn-secondary">
             <Download size={18} /> Export Results
           </button>
+          <button 
+            className="btn-ai-insights"
+            onClick={handleGenerateAIInsights}
+            disabled={isGeneratingAI}
+          >
+            {isGeneratingAI ? (
+              <Loader2 size={18} className="spinner" />
+            ) : (
+              <Sparkles size={18} />
+            )}
+            {isGeneratingAI ? "Generating AI Insights..." : "Generate AI Insights"}
+          </button>
         </div>
+
+        {/* AI Insights Display */}
+        {(aiInsights || isGeneratingAI) && (
+          <div className="ai-insights-section">
+            <h3>
+              <Sparkles size={20} style={{ color: '#f59e0b' }} />
+              AI Analyst Insights
+            </h3>
+            {isGeneratingAI ? (
+              <div className="ai-loading">
+                <div className="pulse-dot"></div>
+                <p>AI is analyzing your sales patterns...</p>
+              </div>
+            ) : (
+              <div className="ai-content markdown-body">
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                  {aiInsights}
+                </ReactMarkdown>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     )}
 

@@ -5,7 +5,11 @@ from dotenv import load_dotenv
 load_dotenv()
 
 MONGODB_URI = os.getenv("MONGODB_URI")
-client = AsyncIOMotorClient(MONGODB_URI, serverSelectionTimeoutMS=5000)
+client = AsyncIOMotorClient(
+    MONGODB_URI, 
+    serverSelectionTimeoutMS=30000,
+    readPreference='primaryPreferred'
+)
 db = client["trendcast"]
     
 # Collections (these are async Motor collections)

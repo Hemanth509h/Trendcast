@@ -185,7 +185,10 @@ async def generate_forecast(req: ForecastRequest, request: Request):
             "forecast_data": response_payload,
             "created_at": datetime.utcnow().isoformat(),
         }
-        await forecasts_collection.insert_one(forecast_record)
+        result = await forecasts_collection.insert_one(forecast_record)
+        
+        # Include the ID in the response so frontend can use it (e.g., for AI insights)
+        response_payload["id"] = str(result.inserted_id)
 
         return response_payload
     except Exception as e:

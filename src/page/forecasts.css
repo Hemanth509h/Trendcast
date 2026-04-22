@@ -298,3 +298,102 @@
   .config-row { grid-template-columns: 1fr; }
   .metrics-grid { grid-template-columns: 1fr; }
 }
+
+/* AI Insights Styles */
+.btn-ai-insights {
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  color: white;
+  border: none;
+  padding: 0.875rem 1.5rem;
+  border-radius: var(--radius-md);
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 4px 15px rgba(245, 158, 11, 0.3);
+}
+
+.btn-ai-insights:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(245, 158, 11, 0.4);
+  filter: brightness(1.1);
+}
+
+.btn-ai-insights:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.ai-insights-section {
+  margin-top: 2.5rem;
+  background: rgba(245, 158, 11, 0.03);
+  border: 1px solid rgba(245, 158, 11, 0.2);
+  border-radius: var(--radius-lg);
+  padding: 2rem;
+  animation: slideUp 0.6s ease-out;
+}
+
+.ai-insights-section h3 {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 0;
+  margin-bottom: 1.5rem;
+  color: #f59e0b;
+  font-size: 1.25rem;
+}
+
+.ai-content {
+  color: var(--text-main);
+  line-height: 1.7;
+  font-size: 1rem;
+}
+
+.markdown-body h4 {
+  margin-top: 1.5rem;
+  margin-bottom: 0.75rem;
+  color: #f59e0b;
+}
+
+.markdown-body ul, .markdown-body ol {
+  padding-left: 1.5rem;
+  margin-bottom: 1rem;
+}
+
+.markdown-body li {
+  margin-bottom: 0.5rem;
+}
+
+.markdown-body strong {
+  color: #fbbf24;
+  font-weight: 700;
+}
+
+.ai-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  padding: 2rem 0;
+}
+
+.pulse-dot {
+  width: 12px;
+  height: 12px;
+  background-color: #f59e0b;
+  border-radius: 50%;
+  animation: pulse 1.5s infinite ease-in-out;
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes pulse {
+  0%, 100% { transform: scale(0.8); opacity: 0.5; }
+  50% { transform: scale(1.2); opacity: 1; }
+}
+
