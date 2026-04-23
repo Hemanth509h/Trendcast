@@ -119,20 +119,32 @@ async def generate_forecast(req: ForecastRequest, request: Request):
         def compute_metrics(series_obj, hist_pred):
             actual = np.array(series_obj)
             pred = np.array(hist_pred)
+            valid = ~np.isnan(pred) & ~np.isnan(actual)
+            actual = actual[valid]
+            pred = pred[valid]
+            if len(actual) == 0:
+                return {
+                    "mae": 0.0,
+                    "mse": 0.0,
+                    "r2": 0.0,
+                    "rmse": 0.0,
+                    "accuracy": 0.0
+                }
             mae_val = mean_absolute_error(actual, pred)
             mse_val = mean_squared_error(actual, pred)
             r2_val = r2_score(actual, pred)
+            rmse_val = np.sqrt(mse_val)
             mask = actual != 0
             if np.any(mask):
                 mape = np.mean(np.abs((actual[mask] - pred[mask]) / actual[mask]))
                 accuracy = max(0, min(100, (1 - mape) * 100))
             else:
-                accuracy = 0
+                accuracy = 0.0
             return {
                 "mae": float(mae_val),
                 "mse": float(mse_val),
                 "r2": float(r2_val),
-                "rmse": float(np.sqrt(mse_val)),
+                "rmse": float(rmse_val),
                 "accuracy": float(accuracy)
             }
 
