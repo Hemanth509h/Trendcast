@@ -134,12 +134,14 @@ async def generate_forecast(req: ForecastRequest, request: Request):
             mse_val = mean_squared_error(actual, pred)
             r2_val = r2_score(actual, pred)
             rmse_val = np.sqrt(mse_val)
-            mask = actual != 0
-            if np.any(mask):
-                mape = np.mean(np.abs((actual[mask] - pred[mask]) / actual[mask]))
-                accuracy = max(0, min(100, (1 - mape) * 100))
-            else:
-                accuracy = 0.0
+            # Use SMAPE (Symmetric MAPE) — handles zeros gracefully.
+            # denominator uses (|actual| + |pred|) / 2 so it never divides by zero
+            # unless BOTH actual and pred are 0 (which means perfect prediction).
+            denom = (np.abs(actual) + np.abs(pred)) / 2.0
+            # Where denominator is 0, both values are 0 → error is 0
+            smape_terms = np.where(denom == 0, 0.0, np.abs(actual - pred) / denom)
+            smape = np.mean(smape_terms)  # between 0 and 2
+            accuracy = max(0.0, min(100.0, (1 - smape / 2) * 100))
             return {
                 "mae": float(mae_val),
                 "mse": float(mse_val),
